@@ -44,7 +44,7 @@ const getArtifacts = (
     projectPath,
     'artifacts',
     'contracts',
-    `${rootContractName}`,
+    `${rootContractName}.sol`,
     `${truncatedContractName}.json`
   );
 
@@ -58,28 +58,32 @@ const getArtifacts = (
 
     return { ABI, bytecode };
   } catch (e) {
+    console.log('~path', contractPath);
     throw new Error(
       `Contract ${rootContractName} not found in artifacts folder. Exiting.`
     );
   }
 };
 
-const sendArtifacts = async (ABI: any, bytecode: string): Promise<string> => {
+const sendArtifacts = async (abi: any, bytecode: string): Promise<string> => {
   const mutation = gql`
-    mutation SendArtifacts($ABI: JSON!, $bytecode: String!) {
-      storeArtifacts(ABI: $ABI, bytecode: $bytecode) {
+    mutation CreateArtifacts($req: CreateArtifactsReq!) {
+      createArtifacts(req: $req) {
         id
       }
     }
   `;
 
   const variables = {
-    ABI: ABI,
-    bytecode: bytecode,
+    req: {
+      abi: JSON.stringify(abi),
+      bytecode: bytecode,
+    },
   };
 
   // PLACEHOLDER
   const url = 'https://bff.bunzz.dev/graphql';
+  // const url = 'http://127.0.0.1:8081/graphql';
 
   try {
     // Send the request
