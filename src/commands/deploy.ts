@@ -5,6 +5,14 @@ import { execute } from '../utils/executer';
 import { getRootContractName } from '../utils/contract';
 import { request, gql } from 'graphql-request';
 
+const PROD_BFF = 'https://bff.bunzz.dev/graphql';
+const DEV_BFF = 'https://bff.dev.bunzz.dev/graphql';
+const LOCAL_BFF = 'http://127.0.0.1:8081/graphql';
+
+const PROD_FE = 'https://app.bunzz.dev';
+const DEV_FE = 'https://app.dev.bunzz.dev';
+const LOCAL_FE = 'http://localhost:3000';
+
 const compile = async (projectPath: string): Promise<void> => {
   const hardhatConfigPath = path.join(projectPath, 'hardhat.config.js');
   if (!fs.existsSync(hardhatConfigPath)) {
@@ -65,7 +73,11 @@ const getArtifacts = (
   }
 };
 
-const sendArtifacts = async (abi: any, bytecode: string): Promise<string> => {
+const sendArtifacts = async (
+  options: any,
+  abi: any,
+  bytecode: string
+): Promise<string> => {
   const mutation = gql`
     mutation CreateArtifacts($req: CreateArtifactsReq!) {
       createArtifacts(req: $req) {
@@ -81,9 +93,19 @@ const sendArtifacts = async (abi: any, bytecode: string): Promise<string> => {
     },
   };
 
-  // PLACEHOLDER
-  const url = 'https://bff.bunzz.dev/graphql';
-  // const url = 'http://127.0.0.1:8081/graphql';
+  let url = PROD_BFF;
+
+  switch (options.env) {
+    case 'prod':
+      url = PROD_BFF;
+      break;
+    case 'dev':
+      url = DEV_BFF;
+      break;
+    case 'local':
+      url = LOCAL_BFF;
+      break;
+  }
 
   try {
     // Send the request
@@ -96,16 +118,31 @@ const sendArtifacts = async (abi: any, bytecode: string): Promise<string> => {
   }
 };
 
-const openFrontend = async (id: string): Promise<void> => {
-  // PLACEHOLDER
-  const url = `https://bunzz.dev/deploy/${id}`;
+const openFrontend = async (options: any, id: string): Promise<void> => {
+  let url = PROD_FE;
+
+  switch (options.env) {
+    case 'prod':
+      url = PROD_FE;
+      break;
+    case 'dev':
+      url = DEV_FE;
+      break;
+    case 'local':
+      url = LOCAL_FE;
+      break;
+  }
+
+  const finalUrl = `${url}/deploy/${id}`;
   try {
-    await execute(`open ${url}`, process.cwd(), {
+    await execute(`open ${finalUrl}`, process.cwd(), {
       log: false,
       cwd: process.cwd(),
     });
   } catch (e: any) {
-    throw new Error(`Failed to open browser at ${url}, please open manually.`);
+    throw new Error(
+      `Failed to open browser at ${finalUrl}, please open manually.`
+    );
   }
 };
 
@@ -129,8 +166,8 @@ const main = async (options: any) => {
     }
 
     const { ABI, bytecode } = getArtifacts(projectPath, rootContractName);
-    const id = await sendArtifacts(ABI, bytecode);
-    await openFrontend(id);
+    const id = await sendArtifacts(options, ABI, bytecode);
+    await openFrontend(options, id);
   } catch (e: any) {
     console.error(e.message);
   }

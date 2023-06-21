@@ -21,6 +21,11 @@ program
   .description('Deploy contract through the Bunzz frontend')
   .option('-p, --path <path>', 'Path to the contract to deploy', '.')
   .option('-c, --contract <contract>', 'name of the contract to deploy')
+  .option(
+    '-e, --env <env>',
+    'Environment to deploy to [prod, dev, local]',
+    'prod'
+  )
   .action((options) => {
     program.opts = () => options;
   });
