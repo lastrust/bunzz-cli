@@ -1,9 +1,9 @@
 import fs from 'fs';
+import { gql, request } from 'graphql-request';
+import open from 'open';
 import path from 'path';
-import { Interface } from 'readline';
-import { execute } from '../utils/executer';
-import { getRootContractName } from '../utils/contract';
-import { request, gql } from 'graphql-request';
+import { getRootContractName } from '../utils/contract.js';
+import { execute } from '../utils/executer.js';
 
 const PROD_BFF = 'https://bff.bunzz.dev/graphql';
 const DEV_BFF = 'https://bff.dev.bunzz.dev/graphql';
@@ -66,7 +66,6 @@ const getArtifacts = (
 
     return { ABI, bytecode };
   } catch (e) {
-    console.log('~path', contractPath);
     throw new Error(
       `Contract ${rootContractName} not found in artifacts folder. Exiting.`
     );
@@ -108,11 +107,9 @@ const sendArtifacts = async (
   }
 
   try {
-    // Send the request
     const response: any = await request(url, mutation, variables);
 
-    // Assuming the mutation returns an object with an id property
-    return response.storeArtifacts.id;
+    return response.createArtifacts.id;
   } catch (error) {
     throw new Error('Failed to send artifacts to bunzz.dev');
   }
@@ -135,10 +132,7 @@ const openFrontend = async (options: any, id: string): Promise<void> => {
 
   const finalUrl = `${url}/deploy/${id}`;
   try {
-    await execute(`open ${finalUrl}`, process.cwd(), {
-      log: false,
-      cwd: process.cwd(),
-    });
+    await open(finalUrl);
   } catch (e: any) {
     throw new Error(
       `Failed to open browser at ${finalUrl}, please open manually.`
@@ -150,8 +144,6 @@ const main = async (options: any) => {
   let projectPath = process.cwd();
   if (options.path) {
     projectPath = options.path;
-  } else {
-    console.log('~options', options);
   }
 
   console.log(`Deploying project at ${projectPath}`);
@@ -162,7 +154,11 @@ const main = async (options: any) => {
     let rootContractName = options.contract;
     if (!rootContractName) {
       rootContractName = getRootContractName(projectPath);
-      console.log(`No contract provided. Deploying ${rootContractName}.sol`);
+      console.log(
+        `No contract provided. Deploying ${rootContractName}.sol${
+          options.env ? ` to ${options.env} environment` : ``
+        }\n`
+      );
     }
 
     const { ABI, bytecode } = getArtifacts(projectPath, rootContractName);

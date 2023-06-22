@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
-import deploy from './commands/deploy';
-import init from './commands/init';
+import deploy from './commands/deploy.js';
+import init from './commands/init.js';
 
 const program = new Command();
 

@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { Interface, createInterface } from 'readline';
-import { execute } from '../utils/executer';
+import { execute } from '../utils/executer.js';
 
 const main = async (options: any, rlInterface?: Interface | null) => {
   let projectPath = process.cwd();
