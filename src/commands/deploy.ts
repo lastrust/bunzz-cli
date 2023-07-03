@@ -41,11 +41,9 @@ const getArtifacts = (
   ABI: any;
   bytecode: string;
 } => {
-  let truncatedContractName: string[] | string;
-  truncatedContractName = rootContractName.split('/');
-  truncatedContractName =
-    truncatedContractName[truncatedContractName.length - 1];
-  truncatedContractName = truncatedContractName.split('.')[0];
+  const truncatedContractName = rootContractName
+    .split('/')
+    [rootContractName.split('/').length - 1].split('.')[0];
 
   // Find the compiled contract in the artifacts folder
   const contractPath = path.join(
@@ -92,17 +90,17 @@ const sendArtifacts = async (
     },
   };
 
-  let url = PROD_BFF;
+  let url;
 
   switch (options.env) {
-    case 'prod':
-      url = PROD_BFF;
-      break;
     case 'dev':
       url = DEV_BFF;
       break;
     case 'local':
       url = LOCAL_BFF;
+      break;
+    default:
+      url = PROD_BFF;
       break;
   }
 
@@ -116,17 +114,17 @@ const sendArtifacts = async (
 };
 
 const openFrontend = async (options: any, id: string): Promise<void> => {
-  let url = PROD_FE;
+  let url;
 
   switch (options.env) {
-    case 'prod':
-      url = PROD_FE;
-      break;
     case 'dev':
       url = DEV_FE;
       break;
     case 'local':
       url = LOCAL_FE;
+      break;
+    default:
+      url = PROD_FE;
       break;
   }
 
