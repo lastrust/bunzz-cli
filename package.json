@@ -10,7 +10,8 @@
   },
   "scripts": {
     "build": "npx tsc",
-    "dev": "npm run build && node dist/index.js"
+    "dev": "npm run build && node dist/index.js",
+    "dev-cli": "npm run build && npm link"
   },
   "keywords": [],
   "author": "",
