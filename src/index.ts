@@ -3,6 +3,7 @@
 import { Command } from 'commander';
 import deploy from './commands/deploy.js';
 import init from './commands/init.js';
+import importCode from './commands/import.js';
 
 const program = new Command();
 
@@ -30,6 +31,20 @@ program
     program.opts = () => options;
   });
 
+program
+  .command('import')
+  .description('Import a contract from the Bunzz frontend')
+  .option('-c, --chain <chain>', 'Chain to import from [1, 5, etc]', '1')
+  .option('-a, --address <address>', 'Address of the contract to import')
+  .option(
+    '-e, --env <env>',
+    'Environment to import from [prod, dev, local]',
+    'prod'
+  )
+  .action((options) => {
+    program.opts = () => options;
+  });
+
 program.parse(process.argv);
 
 const options = program.opts();
@@ -41,4 +56,6 @@ switch (program.args[0]) {
   case 'deploy':
     deploy(options);
     break;
+  case 'import':
+    importCode(options);
 }
