@@ -150,10 +150,7 @@ const mkDirFromSources = (
 };
 
 const main = async (options: any) => {
-  let projectPath = process.cwd();
-  if (options.path) {
-    projectPath = options.path;
-  }
+  const projectPath = options.path || process.cwd();
 
   const chainId = options.chain;
   const contractAddress = options.address;

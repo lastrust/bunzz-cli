@@ -46,7 +46,13 @@ The Bunzz CLI provides several commands that enable you to initialize, deploy, a
 
 - **bunzz -h:** Show help information and version details.
 
-- **bunzz init [options]:** Initialize a new Bunzz project. Currently the only provided option is hardhat, which will be used by default.
+- **bunzz init [options]:** Initialize a new Bunzz project. The options you can use with this command include:
+
+  - `-p, --path <path>`: Path to the project folder (default: ".")
+  - `-h, --install-hardhat`: Install the latest version of Hardhat.
+  - `-o, --install-openzeppelin`: Install the latest version of OpenZeppelin.
+  - `-f, --force`: Force the creation of a new config file.
+  - `-v, --solidity-version <version>`: Specify the version of Solidity to use.
 
 - **bunzz deploy [options]:** Deploy contract through the Bunzz frontend. The options you can use with this command include:
 

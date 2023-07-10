@@ -12,8 +12,27 @@ program.version('0.0.1').description('Bunzz CLI');
 program
   .command('init')
   .description('Initialize a new Bunzz project')
-  .option('--hardhat', 'Initialize a new Bunzz project with Hardhat')
+  .option('-p, --path <path>', 'Path to the project folder', '.')
+  .option('-h, --install-hardhat', 'Install the latest version of Hardhat')
+  .option(
+    '-o, --install-openzeppelin',
+    'Install the latest version of OpenZeppelin'
+  )
+  .option('-f, --force', 'Force the creation of a new config file')
+  .option(
+    '-v, --solidity-version <version>',
+    'Specify the version of Solidity to use'
+  )
   .action((options) => {
+    const { solidityVersion } = options;
+    if (
+      solidityVersion &&
+      !solidityVersion.match(/^(\d+\.)?(\d+\.)?(\*|\d+)$/)
+    ) {
+      console.error('Invalid Solidity version specified. Aborting command.');
+      process.exit(1);
+    }
+
     program.opts = () => options;
   });
 

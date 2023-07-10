@@ -139,10 +139,7 @@ const openFrontend = async (options: any, id: string): Promise<void> => {
 };
 
 const main = async (options: any) => {
-  let projectPath = process.cwd();
-  if (options.path) {
-    projectPath = options.path;
-  }
+  const projectPath = options.path || process.cwd();
 
   console.log(`Deploying project at ${projectPath}`);
 
