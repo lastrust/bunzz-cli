@@ -13,7 +13,7 @@ program
   .command('init')
   .description('Initialize a new Bunzz project')
   .option('-p, --path <path>', 'Path to the project folder', '.')
-  .option('-h, --install-hardhat', 'Install the latest version of Hardhat')
+  .option('-ih, --install-hardhat', 'Install the latest version of Hardhat')
   .option(
     '-o, --install-openzeppelin',
     'Install the latest version of OpenZeppelin'
