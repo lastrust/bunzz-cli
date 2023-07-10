@@ -34,14 +34,17 @@ program
 program
   .command('import')
   .description('Import a contract from the Bunzz frontend')
-  .option('-c, --chain <chain>', 'Chain to import from [1, 5, etc]', '1')
-  .option('-a, --address <address>', 'Address of the contract to import')
+  .argument('<id>', 'ID to import')
   .option(
     '-e, --env <env>',
     'Environment to import from [prod, dev, local]',
     'prod'
   )
-  .action((options) => {
+  .action((id, options) => {
+    let [chain, address] = id.split('_');
+    options.chain = chain;
+    options.address = address;
+
     program.opts = () => options;
   });
 
