@@ -28,9 +28,7 @@ const compile = async (projectPath: string): Promise<void> => {
     const errorLines = e.message.split('\n').filter((line: string) => {
       return !line.includes('--stack') || !line.includes('--verbose');
     });
-    errorLines.forEach((errorLine: string) => {
-      console.error(errorLine);
-    });
+    throw new Error(errorLines.join('\n'));
   }
 };
 
