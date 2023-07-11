@@ -61,6 +61,18 @@ program
   )
   .action((id, options) => {
     let [chain, address] = id.split('_');
+
+    const isValid =
+      chain !== undefined && // Check if the chain is defined
+      address !== undefined && // Check if the address is defined
+      !isNaN(Number(chain)) && // Check if the chain is a number
+      /^0x([A-Fa-f0-9]{2})+$/.test(address); // Check if the address is a valid hex string
+
+    if (!isValid) {
+      console.error('Invalid ID specified. Aborting command.');
+      process.exit(1);
+    }
+
     options.chain = chain;
     options.address = address;
 
