@@ -2,7 +2,7 @@ import fs from 'fs';
 import { gql, request } from 'graphql-request';
 import open from 'open';
 import path from 'path';
-import { getRootContractName } from '../utils/contract.js';
+import { getRootContractName, getRootContracts } from '../utils/contract.js';
 import { execute } from '../utils/executer.js';
 
 const PROD_BFF = 'https://bff.bunzz.dev/graphql';
@@ -26,7 +26,11 @@ const compile = async (projectPath: string): Promise<void> => {
     });
   } catch (e: any) {
     const errorLines = e.message.split('\n').filter((line: string) => {
-      return !line.includes('--stack') || !line.includes('--verbose');
+      return (
+        !line.includes('--stack') ||
+        !line.includes('--verbose') ||
+        !line.includes('https')
+      );
     });
     throw new Error(errorLines.join('\n'));
   }
@@ -137,7 +141,7 @@ const openFrontend = async (options: any, id: string): Promise<void> => {
 };
 
 const main = async (options: any) => {
-  const projectPath = options.path || process.cwd();
+  const projectPath = path.resolve(options.path || process.cwd());
 
   console.log(`Deploying project at ${projectPath}`);
 
@@ -145,14 +149,21 @@ const main = async (options: any) => {
     await compile(projectPath);
 
     let rootContractName = options.contract;
-    if (!rootContractName) {
-      rootContractName = getRootContractName(projectPath);
+    // Check if there is more than one .sol file at the root level of the contracts folder
+
+    const rootContracts = getRootContracts(projectPath);
+
+    if (!rootContractName && rootContracts.length > 1) {
+      rootContractName = rootContracts[0].replace('.sol', '');
       console.log(
-        `No contract provided. Deploying ${rootContractName}.sol${
-          options.env ? ` to ${options.env} environment` : ``
-        }\n`
+        `Multiple solidity files found, but no contract was specified with '-c', using ${rootContractName}.sol...`
       );
     }
+    console.log(
+      `Deploying ${rootContractName}.sol${
+        options.env !== 'prod' ? ` to ${options.env} environment` : ``
+      }\n`
+    );
 
     const { ABI, bytecode } = getArtifacts(projectPath, rootContractName);
     const id = await sendArtifacts(options, ABI, bytecode);

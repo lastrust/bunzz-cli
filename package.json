@@ -1,6 +1,6 @@
 {
   "name": "bunzz",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "",
   "exports": {
     ".": "./dist/index.js"
