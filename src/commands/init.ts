@@ -2,11 +2,15 @@ import fs from 'fs';
 import path from 'path';
 import { Interface, createInterface } from 'readline';
 import { execute } from '../utils/executer.js';
+import { getRootContractVersion } from '../utils/contract.js';
+import * as readlineSync from 'readline-sync';
 
 const checkHardhatConfig = (projectPath: string) => {
   const hardhatConfigPath = path.join(projectPath, 'hardhat.config.js');
   if (fs.existsSync(hardhatConfigPath)) {
-    console.log('Hardhat is already initialized. Exiting.');
+    console.log('Hardhat is already initialized.');
+    console.log('If you want to overwrite the config, please use --force.');
+    console.log('Exiting.');
     return true;
   }
   return false;
@@ -108,14 +112,17 @@ const getReadlineInterface = (rlInterface?: Interface | null) => {
   );
 };
 
-const validateSolidityVersion = (version: string | null) => {
+const validateSolidityVersion = (
+  version: string | null,
+  rootContractVersion: string
+) => {
   if (!version || !version.match(/^(\d+\.)?(\d+\.)?(\*|\d+)$/)) {
     console.log(
       `${
         version !== '' ? 'Invalid version provided' : 'No version provided'
-      }. Using 0.8.0`
+      }. Using ${rootContractVersion}`
     );
-    return '0.8.0';
+    return rootContractVersion;
   }
   return version;
 };
@@ -133,21 +140,28 @@ const createHardhatConfig = (
 ) => {
   const hardhatConfigPath = path.join(projectPath, 'hardhat.config.js');
   // if solidityVersion is null, that means none was provided
+  let rootContractVersion = '';
+  try {
+    rootContractVersion = getRootContractVersion(projectPath);
+    console.log(
+      `Found version of solidity files in /contracts folder as ${rootContractVersion}`
+    );
+  } catch {
+    rootContractVersion = '0.8.0';
+  }
 
   if (!solidityVersion) {
-    rl.question(
-      'What version of Solidity do you want to use? (if no option is provided, 0.8.0 will be used): ',
-      (version) => {
-        const finalVersion = validateSolidityVersion(version);
-        writeConfig(hardhatConfigPath, finalVersion);
-        rl.close();
-      }
+    const version = readlineSync.question(
+      `What version of Solidity do you want to use? (if no option is provided, ${rootContractVersion} will be used): `
     );
-  } else {
-    const finalVersion = validateSolidityVersion(solidityVersion);
-    writeConfig(hardhatConfigPath, finalVersion);
-    rl.close();
+    solidityVersion = version;
   }
+
+  const finalVersion = validateSolidityVersion(
+    solidityVersion,
+    rootContractVersion
+  );
+  writeConfig(hardhatConfigPath, finalVersion);
 };
 
 const createContractsFolder = (projectPath: string) => {
