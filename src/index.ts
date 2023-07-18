@@ -3,7 +3,7 @@
 import { Command } from 'commander';
 import deploy from './commands/deploy.js';
 import init from './commands/init.js';
-import importCode from './commands/import.js';
+import cloneContract from './commands/clone.js';
 
 const program = new Command();
 
@@ -51,15 +51,16 @@ program
   });
 
 program
-  .command('import')
-  .description('Import a contract from the Bunzz frontend')
-  .argument('<id>', 'ID to import')
+  .command('clone')
+  .description('Clone a contract from the Bunzz frontend')
+  .argument('<id>', 'ID of the contract to clone')
+  .argument('[directory]', 'Name of the new directory')
   .option(
     '-e, --env <env>',
-    'Environment to import from [prod, dev, local]',
+    'Environment to clone from [prod, dev, local]',
     'prod'
   )
-  .action((id, options) => {
+  .action((id, directory, options) => {
     let [chain, address] = id.split('_');
 
     const isValid =
@@ -76,8 +77,15 @@ program
     options.chain = chain;
     options.address = address;
 
+    // If directory name is provided, overwrite the default directory name
+    if (directory) {
+      options.directory = directory;
+    }
+
     program.opts = () => options;
   });
+
+program.parse(process.argv);
 
 program.parse(process.argv);
 
@@ -90,6 +98,6 @@ switch (program.args[0]) {
   case 'deploy':
     deploy(options);
     break;
-  case 'import':
-    importCode(options);
+  case 'clone':
+    cloneContract(options);
 }
