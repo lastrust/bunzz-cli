@@ -13,29 +13,6 @@ const PROD_FE = 'https://app.bunzz.dev';
 const DEV_FE = 'https://app.dev.bunzz.dev';
 const LOCAL_FE = 'http://localhost:3000';
 
-const compile = async (projectPath: string): Promise<void> => {
-  const hardhatConfigPath = path.join(projectPath, 'hardhat.config.js');
-  if (!fs.existsSync(hardhatConfigPath)) {
-    throw new Error('Hardhat is required to proceed. Please run bunzz init.');
-  }
-
-  try {
-    await execute(`npx hardhat compile`, projectPath, {
-      log: false,
-      cwd: projectPath,
-    });
-  } catch (e: any) {
-    const errorLines = e.message.split('\n').filter((line: string) => {
-      return (
-        !line.includes('--stack') ||
-        !line.includes('--verbose') ||
-        !line.includes('https')
-      );
-    });
-    throw new Error(errorLines.join('\n'));
-  }
-};
-
 const getArtifacts = (
   projectPath: string,
   rootContractName: string
@@ -75,7 +52,8 @@ const getArtifacts = (
 const sendArtifacts = async (
   options: any,
   abi: any,
-  bytecode: string
+  bytecode: string,
+  contractName: string
 ): Promise<string> => {
   const mutation = gql`
     mutation CreateArtifacts($req: CreateArtifactsReq!) {
@@ -88,7 +66,8 @@ const sendArtifacts = async (
   const variables = {
     req: {
       abi: JSON.stringify(abi),
-      bytecode: bytecode,
+      bytecode,
+      contractName,
     },
   };
 
@@ -146,15 +125,12 @@ const main = async (options: any) => {
   console.log(`Deploying project at ${projectPath}`);
 
   try {
-    await compile(projectPath);
-
     let rootContractName = options.contract;
     // Check if there is more than one .sol file at the root level of the contracts folder
 
     const rootContracts = getRootContracts(projectPath);
-
+    rootContractName = rootContracts[0].replace('.sol', '');
     if (!rootContractName && rootContracts.length > 1) {
-      rootContractName = rootContracts[0].replace('.sol', '');
       console.log(
         `Multiple solidity files found, but no contract was specified with '-c', using ${rootContractName}.sol...`
       );
@@ -166,7 +142,7 @@ const main = async (options: any) => {
     );
 
     const { ABI, bytecode } = getArtifacts(projectPath, rootContractName);
-    const id = await sendArtifacts(options, ABI, bytecode);
+    const id = await sendArtifacts(options, ABI, bytecode, rootContractName);
     await openFrontend(options, id);
   } catch (e: any) {
     console.error(e.message);

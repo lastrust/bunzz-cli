@@ -343,7 +343,10 @@ const main = async (options: any) => {
         `Directory ${path.join(projectPath, directoryName)} already exists`
       )
     ) {
-      fs.rmdirSync(path.join(projectPath, directoryName), { recursive: true });
+      fs.rmSync(path.join(projectPath, directoryName), {
+        recursive: true,
+        force: true,
+      });
     }
   }
 };

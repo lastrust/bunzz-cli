@@ -3,7 +3,8 @@
 import { Command } from 'commander';
 import deploy from './commands/deploy.js';
 import init from './commands/init.js';
-import cloneContract from './commands/clone.js';
+import clone from './commands/clone.js';
+import build from './commands/build.js';
 
 const program = new Command();
 
@@ -85,6 +86,14 @@ program
     program.opts = () => options;
   });
 
+program
+  .command('build')
+  .description('Compile all smart contracts in the project')
+  .option('-p, --path <path>', 'Path to the project folder', '.')
+  .action((options) => {
+    program.opts = () => options;
+  });
+
 program.parse(process.argv);
 
 program.parse(process.argv);
@@ -92,12 +101,12 @@ program.parse(process.argv);
 const options = program.opts();
 
 switch (program.args[0]) {
-  case 'init':
-    init(options);
+  case 'build':
+    build(options);
     break;
   case 'deploy':
     deploy(options);
     break;
   case 'clone':
-    cloneContract(options);
+    clone(options);
 }
