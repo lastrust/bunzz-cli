@@ -1,10 +1,9 @@
 import fs from 'fs';
 import { gql, request } from 'graphql-request';
+import { JSDOM } from 'jsdom';
+import jsonfile from 'jsonfile';
 import open from 'open';
 import path from 'path';
-import { getRootContractName, getRootContracts } from '../utils/contract.js';
-import { execute } from '../utils/executer.js';
-import jsonfile from 'jsonfile';
 
 const PROD_BFF = 'https://bff.bunzz.dev/graphql';
 const DEV_BFF = 'https://bff.dev.bunzz.dev/graphql';
@@ -135,10 +134,26 @@ const sendArtifacts = async (
 
   try {
     const response: any = await request(url, mutation, variables);
-
     return response.createArtifacts.id;
-  } catch (error) {
-    console.error(error);
+  } catch (error: any) {
+    if (error.response) {
+      if (error.response.error) {
+        const dom = new JSDOM(error.response.error);
+        let specificError =
+          dom?.window?.document?.querySelector('pre')?.textContent;
+        if (specificError) console.log(specificError);
+      }
+
+      if (error.response.errors) {
+        if (Array.isArray(error.response.errors)) {
+          error.response.errors.forEach((err: any) => {
+            console.log(err.message); // Assuming the error object has a message property
+          });
+        } else {
+          console.log(error.response.errors);
+        }
+      }
+    }
     throw new Error('Failed to send artifacts to bunzz.dev');
   }
 };
