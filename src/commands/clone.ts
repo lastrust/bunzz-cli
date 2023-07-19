@@ -99,7 +99,7 @@ const initNpmRepository = async (projectPath: string) => {
     });
     console.log('npm repository successfully initialized.');
 
-    // await installHardhat(projectPath);
+    await installHardhat(projectPath);
   } catch (e: any) {
     console.error(e.message);
   }
@@ -197,17 +197,12 @@ const cleanDirectories = (
     .filter((p) => !p.startsWith('@'))
     .map((p) => p.split('/')[0]);
 
-  console.log('paths', paths);
-  console.log('Segments', segments);
-
   let distinctSegments = [...new Set(segments)];
 
   let cleanedSources: Record<FilePath, SourceInfo> = {};
 
   if (distinctSegments.length === 1) {
-    console.log('Distinct segments length is 1', distinctSegments);
     // Replace common starting segment with '/contracts'
-    console.log('paths', paths);
     for (let p of paths) {
       if (!p.startsWith('@')) {
         cleanedSources[p.replace(distinctSegments[0], 'contracts')] =
@@ -216,7 +211,6 @@ const cleanDirectories = (
         cleanedSources[p] = sources[p];
       }
     }
-    console.log('paths', Object.keys(cleanedSources));
   } else {
     // Add '/contracts' to start of each path, ignoring ones that start with '@'
     for (let p of paths) {
@@ -263,25 +257,23 @@ const main = async (options: any) => {
   let directoryName = options.directory;
   let createdDirectory = false;
 
-  if (directoryName) {
-    makeRootDirectory(projectPath, directoryName);
-    projectPath = path.join(projectPath, directoryName);
-    createdDirectory = true;
-  }
-
-  const chainId = options.chain;
-  const contractAddress = options.address;
-
-  if (!chainId) {
-    console.error('Missing chainId');
-    return;
-  }
-  if (!contractAddress) {
-    console.error('Missing contractAddress');
-    return;
-  }
-
   try {
+    if (directoryName) {
+      makeRootDirectory(projectPath, directoryName);
+      projectPath = path.join(projectPath, directoryName);
+      createdDirectory = true;
+    }
+
+    const chainId = options.chain;
+    const contractAddress = options.address;
+
+    if (!chainId) {
+      throw new Error('Missing chainId');
+    }
+    if (!contractAddress) {
+      throw new Error('Missing contractAddress');
+    }
+
     console.log(
       `Fetching contract information for ${contractAddress} from chain ${chainId}`
     );

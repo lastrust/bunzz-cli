@@ -24,7 +24,9 @@ const deleteCache = (projectPath: string) => {
 const compile = async (projectPath: string): Promise<void> => {
   const hardhatConfigPath = path.join(projectPath, 'hardhat.config.js');
   if (!fs.existsSync(hardhatConfigPath)) {
-    throw new Error('Hardhat is required to proceed. Please run bunzz init.');
+    throw new Error(
+      'Hardhat is required to proceed. Please initiate a project using `bunzz clone`'
+    );
   }
 
   try {

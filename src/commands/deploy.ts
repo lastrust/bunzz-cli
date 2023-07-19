@@ -138,6 +138,7 @@ const sendArtifacts = async (
 
     return response.createArtifacts.id;
   } catch (error) {
+    console.error(error);
     throw new Error('Failed to send artifacts to bunzz.dev');
   }
 };
