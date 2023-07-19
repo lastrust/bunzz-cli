@@ -4,6 +4,7 @@ import inquirer from 'inquirer';
 import * as path from 'path';
 import * as readlineSync from 'readline-sync';
 import { execute } from '../utils/executer.js';
+import jsonfile from 'jsonfile';
 
 const PROD_BFF = 'https://bff.bunzz.dev/graphql';
 const DEV_BFF = 'https://bff.dev.bunzz.dev/graphql';
@@ -98,7 +99,7 @@ const initNpmRepository = async (projectPath: string) => {
     });
     console.log('npm repository successfully initialized.');
 
-    await installHardhat(projectPath);
+    // await installHardhat(projectPath);
   } catch (e: any) {
     console.error(e.message);
   }
@@ -141,6 +142,26 @@ const createHardhatConfig = (
   console.log('Hardhat config file created.');
 };
 
+const createBunzzConfig = (
+  projectPath: string,
+  solidityVersion: string,
+  optimizerSettings: {
+    enabled: boolean;
+    runs: number;
+  },
+  contractName: string
+) => {
+  // Construct the config object
+  const config = {
+    solidityVersion: solidityVersion.replace('v', '').split('+')[0],
+    optimizerSettings,
+    contractName,
+  };
+
+  const bunzzConfigPath = path.join(projectPath, 'bunzz.config.json');
+  jsonfile.writeFileSync(bunzzConfigPath, config, { spaces: 2 });
+};
+
 const parseCode = (code: string, name: string): ContractSourceCode => {
   const sourceHasSettings = code.startsWith('{{') && code.endsWith('}}');
 
@@ -159,84 +180,55 @@ const parseCode = (code: string, name: string): ContractSourceCode => {
   }
 };
 
-const separateSources = (
-  sources: Record<FilePath, SourceInfo>
-): Record<FilePath, SourceInfo>[] => {
-  // Remove all sources that start with @
-  const importedSources: Record<FilePath, SourceInfo> = {};
-  const regularSources: Record<FilePath, SourceInfo> = {};
-  for (const filePath in sources) {
-    if (!filePath.startsWith('@')) {
-      regularSources[filePath] = sources[filePath];
-    } else {
-      importedSources[filePath] = sources[filePath];
-    }
-  }
-
-  return [regularSources, importedSources];
-};
-
 const cleanDirectories = (
   sources: Record<FilePath, SourceInfo>
 ): Record<FilePath, SourceInfo> => {
+  // Loop through sources and remove trailing '/' at the beginning
+  for (const filePath in sources) {
+    if (filePath.startsWith('/')) {
+      sources[filePath.slice(1)] = sources[filePath];
+      delete sources[filePath];
+    }
+  }
+
   let paths = Object.keys(sources);
 
-  while (true) {
-    const directories = paths.map((filePath) => filePath.split('/'));
-    const firstSegment = directories[0][0];
+  let segments: string[] = paths
+    .filter((p) => !p.startsWith('@'))
+    .map((p) => p.split('/')[0]);
 
-    if (directories.every((dir) => dir[0] === firstSegment && dir.length > 1)) {
-      // Remove the first segment from all paths
-      paths = directories.map((dir) => path.join(...dir.slice(1)));
-    } else {
-      break;
+  console.log('paths', paths);
+  console.log('Segments', segments);
+
+  let distinctSegments = [...new Set(segments)];
+
+  let cleanedSources: Record<FilePath, SourceInfo> = {};
+
+  if (distinctSegments.length === 1) {
+    console.log('Distinct segments length is 1', distinctSegments);
+    // Replace common starting segment with '/contracts'
+    console.log('paths', paths);
+    for (let p of paths) {
+      if (!p.startsWith('@')) {
+        cleanedSources[p.replace(distinctSegments[0], 'contracts')] =
+          sources[p];
+      } else {
+        cleanedSources[p] = sources[p];
+      }
+    }
+    console.log('paths', Object.keys(cleanedSources));
+  } else {
+    // Add '/contracts' to start of each path, ignoring ones that start with '@'
+    for (let p of paths) {
+      if (!p.startsWith('@')) {
+        cleanedSources['contracts' + p] = sources[p];
+      } else {
+        cleanedSources[p] = sources[p];
+      }
     }
   }
-
-  // Build the cleaned sources
-  const cleanedSources: Record<FilePath, SourceInfo> = {};
-  paths.forEach((filePath, index) => {
-    cleanedSources[filePath] = sources[Object.keys(sources)[index]];
-  });
 
   return cleanedSources;
-};
-
-const getUniqueLibraries = (
-  sources: Record<FilePath, SourceInfo>
-): Record<string, Record<FilePath, SourceInfo>> => {
-  const libraries: Record<string, Record<FilePath, SourceInfo>> = {};
-
-  for (const filePath in sources) {
-    const source = sources[filePath];
-    // The unique identifier of a library are the first two parts of a segment
-    // For example: '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol'
-    // The unique identifier is: '@uniswap/v3-core'
-
-    const segments = filePath.split('/');
-    const uniqueIdentifier = segments.slice(0, 2).join('/');
-    if (!libraries[uniqueIdentifier]) {
-      libraries[uniqueIdentifier] = {};
-    }
-
-    libraries[uniqueIdentifier][filePath] = source;
-  }
-
-  return libraries;
-};
-
-const importLibrary = async (library: string, projectPath: string) => {
-  // install the library with npm
-  try {
-    console.log(`Installing ${library}... in ${projectPath}`);
-    await execute(`npm install --save-dev ${library}`, projectPath, {
-      log: false,
-      cwd: projectPath,
-    });
-    console.log(`${library} successfully installed.`);
-  } catch (e: any) {
-    console.error(e.message);
-  }
 };
 
 const mkDirFromSources = (
@@ -245,7 +237,13 @@ const mkDirFromSources = (
 ) => {
   for (const filePath in sources) {
     // Convert the filePath to an absolute path
-    const absolutePath = path.join(projectPath, filePath);
+    // if filePath doesn't start with '@' or /contracts, add /contracts to the beginning
+    const finalFilePath = filePath.startsWith('@')
+      ? filePath
+      : filePath.startsWith('contracts')
+      ? filePath
+      : `contracts/${filePath}`;
+    const absolutePath = path.join(projectPath, finalFilePath);
 
     // Get the directory path
     const dirName = path.dirname(absolutePath);
@@ -260,40 +258,16 @@ const mkDirFromSources = (
   }
 };
 
-const updateImportsInCode = (
-  filePath: string,
-  code: string,
-  locallyImportedSources: string[]
-): string => {
-  let lines = code.split('\n');
-
-  let depth = filePath.split('/').length - 1;
-  let importPrefix = depth === 0 ? './' : '../'.repeat(depth);
-
-  for (let i = 0; i < lines.length; i++) {
-    let line = lines[i];
-
-    if (line.includes('import "') || line.includes("import '")) {
-      let importPath = line.split('import ')[1].replace(/['";]/g, '');
-
-      if (importPath.startsWith('@')) {
-        let firstTwoSegments = importPath.split('/').slice(0, 2).join('/');
-
-        if (locallyImportedSources.includes(firstTwoSegments)) {
-          let newPath = importPath.replace('@', importPrefix);
-          // lines[i] = line.replace(importPath, newPath);
-        }
-      }
-    }
-  }
-
-  // Join the lines back into a single string
-  return lines.join('\n');
-};
-
 const main = async (options: any) => {
   let projectPath = options.path || process.cwd();
   let directoryName = options.directory;
+  let createdDirectory = false;
+
+  if (directoryName) {
+    makeRootDirectory(projectPath, directoryName);
+    projectPath = path.join(projectPath, directoryName);
+    createdDirectory = true;
+  }
 
   const chainId = options.chain;
   const contractAddress = options.address;
@@ -309,15 +283,16 @@ const main = async (options: any) => {
 
   try {
     console.log(
-      `Fetching contract information for ${contractAddress} on chain ${chainId}`
+      `Fetching contract information for ${contractAddress} from chain ${chainId}`
     );
     const { code, contractName, optimizationUsed, runs, solidityVersion } =
       await fetchContractInfo(options, chainId, contractAddress);
 
-    directoryName = directoryName || contractName;
-
-    makeRootDirectory(projectPath, directoryName);
-    projectPath = path.join(projectPath, directoryName);
+    if (!createdDirectory) {
+      directoryName = directoryName || contractName;
+      makeRootDirectory(projectPath, directoryName);
+      projectPath = path.join(projectPath, directoryName);
+    }
 
     console.log(`Importing code at ${projectPath}`);
 
@@ -328,21 +303,32 @@ const main = async (options: any) => {
       runs,
     });
 
+    createBunzzConfig(
+      projectPath,
+      solidityVersion,
+      {
+        enabled: optimizationUsed,
+        runs,
+      },
+      contractName
+    );
+
     console.log(`Parsing contract code`);
     const { sources } = parseCode(code, contractName);
-    mkDirFromSources(sources, projectPath);
 
+    mkDirFromSources(cleanDirectories(sources), projectPath);
+
+    console.log(`Created ${Object.keys(sources).length} files`);
     console.log(`Done`);
   } catch (e: any) {
     console.error(e.message);
 
+    if (directoryName === undefined) return;
     // If the error is not about the directory existing, delete the directory
-    if (
-      !e.message.includes(
-        `Directory ${path.join(projectPath, directoryName)} already exists`
-      )
-    ) {
-      fs.rmSync(path.join(projectPath, directoryName), {
+    let re = /Directory .* already exists/;
+    if (!re.test(e.message)) {
+      console.log(`Deleting ${projectPath}`);
+      fs.rmSync(projectPath, {
         recursive: true,
         force: true,
       });
