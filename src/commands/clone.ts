@@ -68,7 +68,6 @@ const fetchContractInfo = async (
       response.fetchContractDoc.document;
     return { code, contractName, optimizationUsed, runs, solidityVersion };
   } catch (error) {
-    console.error(error);
     throw new Error('Failed to fetch contract from bunzz.dev');
   }
 };
@@ -310,7 +309,7 @@ const main = async (options: any) => {
 
   try {
     console.log(
-      `Fetching contract info for ${contractAddress} on chain ${chainId}`
+      `Fetching contract information for ${contractAddress} on chain ${chainId}`
     );
     const { code, contractName, optimizationUsed, runs, solidityVersion } =
       await fetchContractInfo(options, chainId, contractAddress);
