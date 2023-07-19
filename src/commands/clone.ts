@@ -211,6 +211,15 @@ const cleanDirectories = (
         cleanedSources[p] = sources[p];
       }
     }
+
+    // If the common starting segment also starts with '@', then add contracts to the beginning
+    if (distinctSegments[0].startsWith('@')) {
+      for (let p of paths) {
+        if (p.startsWith('@')) {
+          cleanedSources[`contracts/${p}`] = sources[p];
+        }
+      }
+    }
   } else {
     // Add '/contracts' to start of each path, ignoring ones that start with '@'
     for (let p of paths) {
