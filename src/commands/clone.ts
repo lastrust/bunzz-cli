@@ -89,6 +89,8 @@ const cleanDirectories = (
       if (!p.startsWith('@')) {
         cleanedSources[p.replace(distinctSegments[0], 'contracts')] =
           sources[p];
+      } else {
+        cleanedSources[p] = sources[p];
       }
     }
   } else {
