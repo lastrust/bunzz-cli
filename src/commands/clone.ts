@@ -3,75 +3,10 @@ import { gql, request } from 'graphql-request';
 import inquirer from 'inquirer';
 import * as path from 'path';
 import * as readlineSync from 'readline-sync';
-import { execute } from '../utils/executer.js';
+import { execute, initNpmRepository } from '../utils/executer.js';
 import jsonfile from 'jsonfile';
-
-const PROD_BFF = 'https://bff.bunzz.dev/graphql';
-const DEV_BFF = 'https://bff.dev.bunzz.dev/graphql';
-const LOCAL_BFF = 'http://127.0.0.1:8081/graphql';
-
-type FilePath = string & { __brand?: 'Path' };
-type SourceInfo = { content: string };
-interface ContractSourceCode {
-  sources: Record<FilePath, SourceInfo>;
-}
-
-const fetchContractInfo = async (
-  options: any,
-  chainId: string,
-  contractAddress: string
-): Promise<{
-  code: string;
-  contractName: string;
-  optimizationUsed: boolean;
-  runs: number;
-  solidityVersion: string;
-}> => {
-  const query = gql`
-    query FetchContractDoc($in: FetchContractDocInput!) {
-      fetchContractDoc(in: $in) {
-        document {
-          code
-          contractName
-          optimizationUsed
-          runs
-          solidityVersion
-        }
-      }
-    }
-  `;
-
-  const variables = {
-    in: {
-      chainId,
-      contractAddress,
-    },
-  };
-
-  let url;
-
-  switch (options.env) {
-    case 'dev':
-      url = DEV_BFF;
-      break;
-    case 'local':
-      url = LOCAL_BFF;
-      break;
-    default:
-      url = PROD_BFF;
-      break;
-  }
-
-  try {
-    const response: any = await request(url, query, variables);
-
-    const { code, contractName, optimizationUsed, runs, solidityVersion } =
-      response.fetchContractDoc.document;
-    return { code, contractName, optimizationUsed, runs, solidityVersion };
-  } catch (error) {
-    throw new Error('Failed to fetch contract from bunzz.dev');
-  }
-};
+import { fetchContractInfo, parseCode } from '../utils/gql.js';
+import { FilePath, SourceInfo } from '../utils/types/gql.js';
 
 const makeRootDirectory = (
   projectPath: string,
@@ -87,36 +22,6 @@ const makeRootDirectory = (
   } else {
     throw new Error(`Directory ${dirPath} already exists`);
   }
-};
-
-const initNpmRepository = async (projectPath: string) => {
-  // Initialize the npm repository
-  try {
-    console.log('Initializing npm repository...');
-    await execute('npm init -y', projectPath, {
-      log: false,
-      cwd: projectPath,
-    });
-    console.log('npm repository successfully initialized.');
-
-    await installHardhat(projectPath);
-  } catch (e: any) {
-    console.error(e.message);
-  }
-};
-
-const installHardhat = async (projectPath: string) => {
-  try {
-    console.log('Installing Hardhat...');
-    await execute(`npm install --save-dev hardhat`, projectPath, {
-      log: false,
-      cwd: projectPath,
-    });
-  } catch (e) {
-    console.error(e);
-  }
-
-  console.log('Hardhat successfully installed.');
 };
 
 const createHardhatConfig = (
@@ -142,42 +47,14 @@ const createHardhatConfig = (
   console.log('Hardhat config file created.');
 };
 
-const createBunzzConfig = (
-  projectPath: string,
-  solidityVersion: string,
-  optimizerSettings: {
-    enabled: boolean;
-    runs: number;
-  },
-  contractName: string
-) => {
+const createBunzzConfig = (projectPath: string, contractName: string) => {
   // Construct the config object
   const config = {
-    solidityVersion: solidityVersion.replace('v', '').split('+')[0],
-    optimizerSettings,
     contractName,
   };
 
   const bunzzConfigPath = path.join(projectPath, 'bunzz.config.json');
   jsonfile.writeFileSync(bunzzConfigPath, config, { spaces: 2 });
-};
-
-const parseCode = (code: string, name: string): ContractSourceCode => {
-  const sourceHasSettings = code.startsWith('{{') && code.endsWith('}}');
-
-  try {
-    return JSON.parse(
-      sourceHasSettings ? code.slice(1, -1) : code
-    ) as ContractSourceCode;
-  } catch (e) {
-    return {
-      sources: {
-        [`contracts/${name}.sol`]: {
-          content: code,
-        },
-      },
-    };
-  }
 };
 
 const cleanDirectories = (
@@ -191,33 +68,27 @@ const cleanDirectories = (
     }
   }
 
-  let paths = Object.keys(sources);
+  const paths = Object.keys(sources);
 
-  let segments: string[] = paths
-    .filter((p) => !p.startsWith('@'))
-    .map((p) => p.split('/')[0]);
+  const segments: string[] = paths.map((p) => p.split('/')[0]);
 
-  let distinctSegments = [...new Set(segments)];
+  const distinctSegments = [
+    ...new Set(segments.filter((segment) => !segment.startsWith('@'))),
+  ];
 
-  let cleanedSources: Record<FilePath, SourceInfo> = {};
-
-  if (distinctSegments.length === 1) {
+  const cleanedSources: Record<FilePath, SourceInfo> = {};
+  if (distinctSegments.length === 0) {
+    for (let p of paths) {
+      if (p.startsWith('@')) {
+        cleanedSources[`contracts/${p}`] = sources[p];
+      }
+    }
+  } else if (distinctSegments.length === 1) {
     // Replace common starting segment with '/contracts'
     for (let p of paths) {
       if (!p.startsWith('@')) {
         cleanedSources[p.replace(distinctSegments[0], 'contracts')] =
           sources[p];
-      } else {
-        cleanedSources[p] = sources[p];
-      }
-    }
-
-    // If the common starting segment also starts with '@', then add contracts to the beginning
-    if (distinctSegments[0].startsWith('@')) {
-      for (let p of paths) {
-        if (p.startsWith('@')) {
-          cleanedSources[`contracts/${p}`] = sources[p];
-        }
       }
     }
   } else {
@@ -241,11 +112,11 @@ const mkDirFromSources = (
   for (const filePath in sources) {
     // Convert the filePath to an absolute path
     // if filePath doesn't start with '@' or /contracts, add /contracts to the beginning
-    const finalFilePath = filePath.startsWith('@')
-      ? filePath
-      : filePath.startsWith('contracts')
-      ? filePath
-      : `contracts/${filePath}`;
+    const finalFilePath = !(
+      filePath.startsWith('@') || filePath.startsWith('contracts')
+    )
+      ? `contracts/${filePath}`
+      : filePath;
     const absolutePath = path.join(projectPath, finalFilePath);
 
     // Get the directory path
@@ -304,15 +175,7 @@ const main = async (options: any) => {
       runs,
     });
 
-    createBunzzConfig(
-      projectPath,
-      solidityVersion,
-      {
-        enabled: optimizationUsed,
-        runs,
-      },
-      contractName
-    );
+    createBunzzConfig(projectPath, contractName);
 
     console.log(`Parsing contract code`);
     const { sources } = parseCode(code, contractName);

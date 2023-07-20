@@ -21,6 +21,39 @@ const deleteCache = (projectPath: string) => {
   }
 };
 
+const checkContracts = (projectPath: string) => {
+  const contractsPath = path.join(projectPath, 'contracts');
+  if (!fs.existsSync(contractsPath)) {
+    throw new Error(
+      'No contracts folder found. Please run this command in the root of your project.'
+    );
+  }
+};
+
+const checkArtifacts = (projectPath: string) => {
+  const artifactsPath = path.join(projectPath, 'artifacts');
+
+  let count = 0;
+
+  const countJsonFiles = (dir: string) => {
+    const files = fs.readdirSync(dir);
+
+    for (let i = 0; i < files.length; i++) {
+      const filename = path.join(dir, files[i]);
+      const stat = fs.lstatSync(filename);
+
+      if (stat.isDirectory()) {
+        countJsonFiles(filename); // Recursive call for directories
+      } else if (filename.endsWith('.json')) {
+        count++;
+      }
+    }
+  };
+
+  countJsonFiles(artifactsPath);
+  return count;
+};
+
 const compile = async (projectPath: string): Promise<void> => {
   const hardhatConfigPath = path.join(projectPath, 'hardhat.config.js');
   if (!fs.existsSync(hardhatConfigPath)) {
@@ -53,8 +86,12 @@ const main = async (options: any) => {
   try {
     deleteCache(projectPath);
 
+    checkContracts(projectPath);
+
     await compile(projectPath);
-    console.log('Successfully compiled all smart contracts.');
+    console.log(`Compiled ${checkArtifacts(projectPath)} solidity files.`);
+    // Please run `bunzz deploy` to deploy this contract (after bunzz build)
+    console.log(`Please run \`bunzz deploy\` to deploy this contract.`);
   } catch (e: any) {
     console.error(e.message);
   }
