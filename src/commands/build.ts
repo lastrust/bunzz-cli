@@ -2,14 +2,6 @@ import fs from 'fs';
 import path from 'path';
 import { execute } from '../utils/executer.js';
 
-const PROD_BFF = 'https://bff.bunzz.dev/graphql';
-const DEV_BFF = 'https://bff.dev.bunzz.dev/graphql';
-const LOCAL_BFF = 'http://127.0.0.1:8081/graphql';
-
-const PROD_FE = 'https://app.bunzz.dev';
-const DEV_FE = 'https://app.dev.bunzz.dev';
-const LOCAL_FE = 'http://localhost:3000';
-
 const deleteCache = (projectPath: string) => {
   const cachePath = path.join(projectPath, 'cache');
   if (fs.existsSync(cachePath)) {

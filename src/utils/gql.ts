@@ -1,9 +1,14 @@
 import { gql, request } from 'graphql-request';
 import { ContractSourceCode } from './types/gql';
+import { JSDOM } from 'jsdom';
 
-const PROD_BFF = 'https://bff.bunzz.dev/graphql';
-const DEV_BFF = 'https://bff.dev.bunzz.dev/graphql';
-const LOCAL_BFF = 'http://127.0.0.1:8081/graphql';
+export const PROD_BFF = 'https://bff.bunzz.dev/graphql';
+export const DEV_BFF = 'https://bff.dev.bunzz.dev/graphql';
+export const LOCAL_BFF = 'http://127.0.0.1:8081/graphql';
+
+export const PROD_FE = 'https://app.bunzz.dev';
+export const DEV_FE = 'https://app.dev.bunzz.dev';
+export const LOCAL_FE = 'http://localhost:3000';
 
 export const fetchContractInfo = async (
   options: any,
@@ -58,6 +63,7 @@ export const fetchContractInfo = async (
       response.fetchContractDoc.document;
     return { code, contractName, optimizationUsed, runs, solidityVersion };
   } catch (error) {
+    handleGqlError(error);
     throw new Error('Failed to fetch contract from bunzz.dev');
   }
 };
@@ -77,5 +83,71 @@ export const parseCode = (code: string, name: string): ContractSourceCode => {
         },
       },
     };
+  }
+};
+
+export const sendArtifacts = async (
+  options: any,
+  abi: any,
+  bytecode: string,
+  contractName: string
+): Promise<string> => {
+  const mutation = gql`
+    mutation CreateArtifacts($req: CreateArtifactsReq!) {
+      createArtifacts(req: $req) {
+        id
+      }
+    }
+  `;
+
+  const variables = {
+    req: {
+      abi: JSON.stringify(abi),
+      bytecode,
+      contractName,
+    },
+  };
+
+  let url;
+
+  switch (options.env) {
+    case 'dev':
+      url = DEV_BFF;
+      break;
+    case 'local':
+      url = LOCAL_BFF;
+      break;
+    default:
+      url = PROD_BFF;
+      break;
+  }
+
+  try {
+    const response: any = await request(url, mutation, variables);
+    return response.createArtifacts.id;
+  } catch (error: any) {
+    handleGqlError(error);
+    throw new Error('Failed to send artifacts to bunzz.dev');
+  }
+};
+
+const handleGqlError = (error: any) => {
+  if (error.response) {
+    if (error.response.error) {
+      const dom = new JSDOM(error.response.error);
+      let specificError =
+        dom?.window?.document?.querySelector('pre')?.textContent;
+      if (specificError) console.log(specificError);
+    }
+
+    if (error.response.errors) {
+      if (Array.isArray(error.response.errors)) {
+        error.response.errors.forEach((err: any) => {
+          console.log(err.message); // Assuming the error object has a message property
+        });
+      } else {
+        console.log(error.response.errors);
+      }
+    }
   }
 };

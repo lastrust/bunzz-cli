@@ -1,17 +1,17 @@
 import fs from 'fs';
 import { gql, request } from 'graphql-request';
-import { JSDOM } from 'jsdom';
 import jsonfile from 'jsonfile';
 import open from 'open';
 import path from 'path';
-
-const PROD_BFF = 'https://bff.bunzz.dev/graphql';
-const DEV_BFF = 'https://bff.dev.bunzz.dev/graphql';
-const LOCAL_BFF = 'http://127.0.0.1:8081/graphql';
-
-const PROD_FE = 'https://app.bunzz.dev';
-const DEV_FE = 'https://app.dev.bunzz.dev';
-const LOCAL_FE = 'http://localhost:3000';
+import {
+  DEV_BFF,
+  DEV_FE,
+  LOCAL_BFF,
+  LOCAL_FE,
+  PROD_BFF,
+  PROD_FE,
+  sendArtifacts,
+} from '../utils/gql';
 
 const getRootContractNameFromConfig = (projectPath: string): string => {
   // There is a bunzz.config.json file
@@ -93,68 +93,6 @@ const getArtifacts = (
     throw new Error(
       `Error occurred when reading contract ${rootContractName}: ${e.message}`
     );
-  }
-};
-
-const sendArtifacts = async (
-  options: any,
-  abi: any,
-  bytecode: string,
-  contractName: string
-): Promise<string> => {
-  const mutation = gql`
-    mutation CreateArtifacts($req: CreateArtifactsReq!) {
-      createArtifacts(req: $req) {
-        id
-      }
-    }
-  `;
-
-  const variables = {
-    req: {
-      abi: JSON.stringify(abi),
-      bytecode,
-      contractName,
-    },
-  };
-
-  let url;
-
-  switch (options.env) {
-    case 'dev':
-      url = DEV_BFF;
-      break;
-    case 'local':
-      url = LOCAL_BFF;
-      break;
-    default:
-      url = PROD_BFF;
-      break;
-  }
-
-  try {
-    const response: any = await request(url, mutation, variables);
-    return response.createArtifacts.id;
-  } catch (error: any) {
-    if (error.response) {
-      if (error.response.error) {
-        const dom = new JSDOM(error.response.error);
-        let specificError =
-          dom?.window?.document?.querySelector('pre')?.textContent;
-        if (specificError) console.log(specificError);
-      }
-
-      if (error.response.errors) {
-        if (Array.isArray(error.response.errors)) {
-          error.response.errors.forEach((err: any) => {
-            console.log(err.message); // Assuming the error object has a message property
-          });
-        } else {
-          console.log(error.response.errors);
-        }
-      }
-    }
-    throw new Error('Failed to send artifacts to bunzz.dev');
   }
 };
 
