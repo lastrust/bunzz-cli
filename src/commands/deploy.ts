@@ -11,7 +11,7 @@ import {
   PROD_BFF,
   PROD_FE,
   sendArtifacts,
-} from '../utils/gql';
+} from '../utils/gql.js';
 
 const getRootContractNameFromConfig = (projectPath: string): string => {
   // There is a bunzz.config.json file

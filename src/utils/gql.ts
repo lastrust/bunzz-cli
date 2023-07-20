@@ -1,5 +1,5 @@
 import { gql, request } from 'graphql-request';
-import { ContractSourceCode } from './types/gql';
+import { ContractSourceCode } from './types/gql.js';
 import { JSDOM } from 'jsdom';
 
 export const PROD_BFF = 'https://bff.bunzz.dev/graphql';
