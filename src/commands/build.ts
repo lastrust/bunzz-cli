@@ -36,8 +36,14 @@ const checkArtifacts = (projectPath: string) => {
 
       if (stat.isDirectory()) {
         countJsonFiles(filename); // Recursive call for directories
-      } else if (filename.endsWith('.json')) {
-        count++;
+      } else if (
+        filename.endsWith('.json') &&
+        !filename.endsWith('.dbg.json')
+      ) {
+        // Only count .json files in directories ending with .sol
+        if (path.basename(path.dirname(filename)).endsWith('.sol')) {
+          count++;
+        }
       }
     }
   };
@@ -81,7 +87,14 @@ const main = async (options: any) => {
     checkContracts(projectPath);
 
     await compile(projectPath);
-    console.log(`Compiled ${checkArtifacts(projectPath)} solidity files.`);
+
+    const compiledContracts = checkArtifacts(projectPath);
+
+    console.log(
+      `Compiled ${compiledContracts} contract${
+        compiledContracts > 1 ? 's' : ''
+      }.`
+    );
     // Please run `bunzz deploy` to deploy this contract (after bunzz build)
     console.log(`Please run \`bunzz deploy\` to deploy this contract.`);
   } catch (e: any) {
