@@ -27,7 +27,7 @@ export const initNpmRepository = async (projectPath: string) => {
     });
     console.log('npm repository successfully initialized.');
 
-    // await installHardhat(projectPath);
+    await installHardhat(projectPath);
   } catch (e: any) {
     console.error(e.message);
   }
