@@ -4,88 +4,60 @@ The Bunzz Command Line Interface (CLI) tool provides a streamlined method for de
 
 ## Installation
 
-Follow these instructions to set up the Bunzz CLI on your local machine for development and testing purposes.
-
 **Prerequisites:** You will need to have Node.js and npm or yarn installed on your system. If you do not have these, you can download and install them from [Node.js](https://nodejs.org/) and [Yarn](https://yarnpkg.com/).
+With npm:
 
-To install the Bunzz CLI:
+```sh
+npm install -g bunzz
+```
 
-1. Clone the repository to your local machine.
-2. Navigate to the cloned repository.
-3. Install the necessary dependencies using either npm or yarn:
+With yarn:
 
-   With npm:
+```sh
+yarn global add bunzz
+```
 
-   ```sh
-   npm install
-   ```
+With pnpm:
 
-   With yarn:
-
-   ```sh
-   yarn install
-   ```
-
-4. Run the Bunzz CLI script:
-
-   With npm:
-
-   ```sh
-   npm run dev-cli
-   ```
-
-   With yarn:
-
-   ```sh
-   yarn dev-cli
-   ```
+```sh
+pnpm install -g bunzz
+```
 
 ## Usage
 
-The Bunzz CLI provides several commands that enable you to initialize, deploy, and import projects. Here is a summary of these commands:
+The Bunzz CLI provides several commands that enable you to clone, build, and deploy projects. Here is a summary of these commands:
 
 - **bunzz -h:** Show help information and version details.
 
-- **bunzz init [options]:** Initialize a new Bunzz project. The options you can use with this command include:
+- **bunzz clone <id> [directory] [options]:** Clone a contract documented by DeCipher. The options you can use with this command include:
 
-  - `-p, --path <path>`: Path to the project folder (default: ".")
-  - `-h, --install-hardhat`: Install the latest version of Hardhat.
-  - `-o, --install-openzeppelin`: Install the latest version of OpenZeppelin.
-  - `-f, --force`: Force the creation of a new config file.
-  - `-v, --solidity-version <version>`: Specify the version of Solidity to use.
+  - `-e, --env <env>`: Environment to clone from [prod, dev, local] (default: "prod").
 
-- **bunzz deploy [options]:** Deploy contract through the Bunzz frontend. The options you can use with this command include:
+- **bunzz build:** Compile all smart contracts in the current directory.
+
+- **bunzz deploy [options]:** Send the ABI and bytecode of a contract to the DeCipher frontend for deployment. The options you can use with this command include:
 
   - `-p, --path <path>`: Path to the contract to deploy (default: ".")
-  - `-c, --contract <contract>`: Name of the contract to deploy.
+  - `-c, --contract <contract>`: Name of the contract to deploy. (default will be taken from `bunzz.config.js`)
   - `-e, --env <env>`: Environment to deploy to [prod, dev, local] (default: "prod").
-
-- **bunzz import [options]:** Import a contract from the Bunzz frontend. The options you can use with this command include:
-
-  - `-c, --chain <chain>`: Chain to import from [1, 5, etc] (default: "1").
-  - `-a, --address <address>`: Address of the contract to import.
-  - `-e, --env <env>`: Environment to import from [prod, dev, local] (default: "prod").
 
 To learn more about a specific command and its options, you can type `bunzz help [command]`.
 
-## Example Commands
+## Example usage
 
-Here are some example commands:
+Here are some examples of how to use the Bunzz CLI:
 
-- To get help on the `init` command:
+- To get help on the `clone` command:
 
   ```sh
-  bunzz init -h
+  bunzz clone -h
   ```
 
-- To deploy a contract to the dev environment:
+- To clone, build, and deploy a contract:
 
   ```sh
-  bunzz deploy -c MyContract -p ./contracts/MyContract.sol -e dev
-  ```
-
-- To import a contract from the prod environment on chain 1:
-
-  ```sh
-  bunzz import -c 1 -a 0x123...abc -e prod
+  bunzz clone 1_0x1234567890abcdef1234567890abcdef12345678 optionalDirectoryName
+  cd optionalDirectoryName
+  bunzz build
+  bunzz deploy
   ```

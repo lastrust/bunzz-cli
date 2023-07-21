@@ -2,54 +2,12 @@
 
 import { Command } from 'commander';
 import deploy from './commands/deploy.js';
-import init from './commands/init.js';
 import clone from './commands/clone.js';
 import build from './commands/build.js';
 
 const program = new Command();
 
-program.version('0.0.1').description('Bunzz CLI');
-
-program
-  .command('init')
-  .description('Initialize a new Bunzz project')
-  .option('-p, --path <path>', 'Path to the project folder', '.')
-  .option('-ih, --install-hardhat', 'Install the latest version of Hardhat')
-  .option(
-    '-o, --install-openzeppelin',
-    'Install the latest version of OpenZeppelin'
-  )
-  .option('-f, --force', 'Force the creation of a new config file')
-  .option(
-    '-v, --solidity-version <version>',
-    'Specify the version of Solidity to use'
-  )
-  .action((options) => {
-    const { solidityVersion } = options;
-    if (
-      solidityVersion &&
-      !solidityVersion.match(/^(\d+\.)?(\d+\.)?(\*|\d+)$/)
-    ) {
-      console.error('Invalid Solidity version specified. Aborting command.');
-      process.exit(1);
-    }
-
-    program.opts = () => options;
-  });
-
-program
-  .command('deploy')
-  .description('Deploy contract through the Bunzz frontend')
-  .option('-p, --path <path>', 'Path to the contract to deploy', '.')
-  .option('-c, --contract <contract>', 'name of the contract to deploy')
-  .option(
-    '-e, --env <env>',
-    'Environment to deploy to [prod, dev, local]',
-    'prod'
-  )
-  .action((options) => {
-    program.opts = () => options;
-  });
+program.version('1.0.0').description('Bunzz CLI');
 
 program
   .command('clone')
@@ -94,6 +52,20 @@ program
     program.opts = () => options;
   });
 
+program
+  .command('deploy')
+  .description('Deploy contract through the Bunzz frontend')
+  .option('-p, --path <path>', 'Path to the contract to deploy', '.')
+  .option('-c, --contract <contract>', 'name of the contract to deploy')
+  .option(
+    '-e, --env <env>',
+    'Environment to deploy to [prod, dev, local]',
+    'prod'
+  )
+  .action((options) => {
+    program.opts = () => options;
+  });
+
 program.parse(process.argv);
 
 program.parse(process.argv);
@@ -101,12 +73,12 @@ program.parse(process.argv);
 const options = program.opts();
 
 switch (program.args[0]) {
+  case 'clone':
+    clone(options);
   case 'build':
     build(options);
     break;
   case 'deploy':
     deploy(options);
     break;
-  case 'clone':
-    clone(options);
 }
