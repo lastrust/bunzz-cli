@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 
-export function getRootContractName(projectPath: string): string {
+export function getRootContracts(projectPath: string): string[] {
   // Find the first .sol file
   const contractsPath = path.join(projectPath, 'contracts');
   if (!fs.existsSync(contractsPath)) {
@@ -17,5 +17,31 @@ export function getRootContractName(projectPath: string): string {
     console.log('No .sol files found in contracts folder. Exiting.');
     process.exit(1);
   }
-  return solFiles[0].replace('.sol', '');
+  return solFiles;
+}
+
+export function getRootContractName(projectPath: string): string {
+  const rootContracts = getRootContracts(projectPath);
+  return rootContracts[0].replace('.sol', '');
+}
+
+export function getRootContractVersion(projectPath: string): string {
+  const rootContractName = getRootContractName(projectPath) + '.sol';
+  // read file sync and get version
+  const rootContractPath = path.join(
+    projectPath,
+    projectPath.endsWith('contracts') ? '' : 'contracts',
+    rootContractName
+  );
+
+  const rootContractContent = fs.readFileSync(rootContractPath, 'utf-8');
+
+  const versionRegex = /pragma solidity (.*);/g;
+  const versionMatch = versionRegex.exec(rootContractContent);
+  if (!versionMatch) {
+    throw new Error('No version found in root contract');
+  }
+
+  // strip ^ or = from version
+  return versionMatch[1].replace(/[\^=]/g, '');
 }

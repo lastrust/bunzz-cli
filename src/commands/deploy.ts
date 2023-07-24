@@ -1,35 +1,39 @@
 import fs from 'fs';
 import { gql, request } from 'graphql-request';
+import jsonfile from 'jsonfile';
 import open from 'open';
 import path from 'path';
-import { getRootContractName } from '../utils/contract.js';
-import { execute } from '../utils/executer.js';
+import {
+  DEV_BFF,
+  DEV_FE,
+  LOCAL_BFF,
+  LOCAL_FE,
+  PROD_BFF,
+  PROD_FE,
+  sendArtifacts,
+} from '../utils/gql.js';
 
-const PROD_BFF = 'https://bff.bunzz.dev/graphql';
-const DEV_BFF = 'https://bff.dev.bunzz.dev/graphql';
-const LOCAL_BFF = 'http://127.0.0.1:8081/graphql';
+const getRootContractNameFromConfig = (projectPath: string): string => {
+  // There is a bunzz.config.json file
+  // Read contractName from it
 
-const PROD_FE = 'https://app.bunzz.dev';
-const DEV_FE = 'https://app.dev.bunzz.dev';
-const LOCAL_FE = 'http://localhost:3000';
+  const bunzzConfigPath = path.join(projectPath, 'bunzz.config.json');
 
-const compile = async (projectPath: string): Promise<void> => {
-  const hardhatConfigPath = path.join(projectPath, 'hardhat.config.js');
-  if (!fs.existsSync(hardhatConfigPath)) {
-    throw new Error('Hardhat is required to proceed. Please run bunzz init.');
+  if (!fs.existsSync(bunzzConfigPath)) {
+    throw new Error(
+      'No bunzz.config.json file found. Please specifiy a contract name with -c.'
+    );
   }
 
-  try {
-    await execute(`npx hardhat compile`, projectPath, {
-      log: false,
-      cwd: projectPath,
-    });
-  } catch (e: any) {
-    const errorLines = e.message.split('\n').filter((line: string) => {
-      return !line.includes('--stack') || !line.includes('--verbose');
-    });
-    throw new Error(errorLines.join('\n'));
+  const bunzzConfig = jsonfile.readFileSync(bunzzConfigPath);
+
+  if (!bunzzConfig.contractName) {
+    throw new Error(
+      'No contractName found in bunzz.config.json. Please specify a contractName.'
+    );
   }
+
+  return bunzzConfig.contractName;
 };
 
 const getArtifacts = (
@@ -39,75 +43,56 @@ const getArtifacts = (
   ABI: any;
   bytecode: string;
 } => {
-  const truncatedContractName = rootContractName
-    .split('/')
-    [rootContractName.split('/').length - 1].split('.')[0];
+  function findInDir(dir: string, filename: string) {
+    let results: string[] = [];
+
+    fs.readdirSync(dir).forEach((dirInner) => {
+      dirInner = path.resolve(dir, dirInner);
+      const stat = fs.statSync(dirInner);
+
+      if (stat.isDirectory()) {
+        results = results.concat(findInDir(dirInner, filename));
+      }
+
+      if (stat.isFile() && path.basename(dirInner) === filename) {
+        results.push(dirInner);
+      }
+    });
+
+    return results;
+  }
 
   // Find the compiled contract in the artifacts folder
-  const contractPath = path.join(
-    projectPath,
-    'artifacts',
-    'contracts',
-    `${rootContractName}.sol`,
-    `${truncatedContractName}.json`
-  );
+  const contractNameJson = `${rootContractName}.json`;
+  const artifactsDirectories = path.join(projectPath, 'artifacts');
+
+  const contractPaths = findInDir(artifactsDirectories, contractNameJson);
+
+  if (!contractPaths.length) {
+    throw new Error(
+      `Contract ${rootContractName} not found in artifacts folder. Exiting.`
+    );
+  }
 
   try {
     // read the json file
-    const contractJson = fs.readFileSync(contractPath, 'utf8');
+    const contractJson = fs.readFileSync(contractPaths[0], 'utf8');
     // parse the json
     const contract = JSON.parse(contractJson);
     const ABI = contract.abi;
     const bytecode = contract.bytecode;
 
+    const path = contractPaths[0];
+    const startIndex = path.indexOf('artifacts');
+    const truncatedPath = path.substring(startIndex);
+
+    console.log(`Found contract ${rootContractName} in ${truncatedPath}`);
+
     return { ABI, bytecode };
-  } catch (e) {
+  } catch (e: any) {
     throw new Error(
-      `Contract ${rootContractName} not found in artifacts folder. Exiting.`
+      `Error occurred when reading contract ${rootContractName}: ${e.message}`
     );
-  }
-};
-
-const sendArtifacts = async (
-  options: any,
-  abi: any,
-  bytecode: string
-): Promise<string> => {
-  const mutation = gql`
-    mutation CreateArtifacts($req: CreateArtifactsReq!) {
-      createArtifacts(req: $req) {
-        id
-      }
-    }
-  `;
-
-  const variables = {
-    req: {
-      abi: JSON.stringify(abi),
-      bytecode: bytecode,
-    },
-  };
-
-  let url;
-
-  switch (options.env) {
-    case 'dev':
-      url = DEV_BFF;
-      break;
-    case 'local':
-      url = LOCAL_BFF;
-      break;
-    default:
-      url = PROD_BFF;
-      break;
-  }
-
-  try {
-    const response: any = await request(url, mutation, variables);
-
-    return response.createArtifacts.id;
-  } catch (error) {
-    throw new Error('Failed to send artifacts to bunzz.dev');
   }
 };
 
@@ -137,26 +122,24 @@ const openFrontend = async (options: any, id: string): Promise<void> => {
 };
 
 const main = async (options: any) => {
-  const projectPath = options.path || process.cwd();
-
-  console.log(`Deploying project at ${projectPath}`);
+  const projectPath = path.resolve(options.path || process.cwd());
+  // .option('-c, --contract <contract>', 'name of the contract to deploy')
+  let rootContractName = options.contract;
 
   try {
-    await compile(projectPath);
-
-    let rootContractName = options.contract;
     if (!rootContractName) {
-      rootContractName = getRootContractName(projectPath);
-      console.log(
-        `No contract provided. Deploying ${rootContractName}.sol${
-          options.env ? ` to ${options.env} environment` : ``
-        }\n`
-      );
+      rootContractName = getRootContractNameFromConfig(projectPath);
     }
+    console.log(
+      `Deploying contract ${rootContractName}${
+        options.env !== 'prod' ? ` to ${options.env} environment` : ``
+      }\n`
+    );
 
     const { ABI, bytecode } = getArtifacts(projectPath, rootContractName);
-    const id = await sendArtifacts(options, ABI, bytecode);
+    const id = await sendArtifacts(options, ABI, bytecode, rootContractName);
     await openFrontend(options, id);
+    console.log('Done');
   } catch (e: any) {
     console.error(e.message);
   }
