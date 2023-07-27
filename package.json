@@ -1,6 +1,6 @@
 {
   "name": "bunzz",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "",
   "exports": {
     ".": "./dist/index.js"
@@ -11,7 +11,8 @@
   "scripts": {
     "build": "npx tsc",
     "dev": "npm run build && node dist/index.js",
-    "dev-cli": "npm run build && npm link"
+    "dev-cli": "npm run build && npm link",
+    "prepare": "npm run build"
   },
   "keywords": [],
   "author": "Bunzz Pte. Ltd.",
