@@ -131,6 +131,50 @@ export const sendArtifacts = async (
   }
 };
 
+
+export const sendCloningAnalytics = async (options: any, chainId: string, contractAddress: string, contractName: string) => {
+  const mutation = gql`
+    mutation ClonedContract($req: ClonedContractReq!) {
+      clonedContract(req: $req) {
+        status
+      }
+    }
+  `;
+
+  const variables = {
+    req: {
+      chainId,
+      contractAddress,
+      contractName,
+    },
+  };
+
+  let url;
+
+  switch (options.env) {
+    case 'dev':
+      url = DEV_BFF;
+      break;
+    case 'local':
+      url = LOCAL_BFF;
+      break;
+    default:
+      url = PROD_BFF;
+      break;
+  }
+
+  try {
+    const response: any = await request(url, mutation, variables);
+    return response.clonedContract.status;
+  } catch (error: any) {
+    console.log("Failed to send analytics to bunzz.dev")
+    console.error(error)
+    handleGqlError(error);
+    console.log("This error does not impact the cloning process and can be ignored")
+  }
+};
+
+
 const handleGqlError = (error: any) => {
   if (error.response) {
     if (error.response.error) {

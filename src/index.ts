@@ -75,6 +75,7 @@ const options = program.opts();
 switch (program.args[0]) {
   case 'clone':
     clone(options);
+    break;
   case 'build':
     build(options);
     break;

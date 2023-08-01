@@ -1,11 +1,8 @@
 import * as fs from 'fs';
-import { gql, request } from 'graphql-request';
-import inquirer from 'inquirer';
-import * as path from 'path';
-import * as readlineSync from 'readline-sync';
-import { execute, initNpmRepository } from '../utils/executer.js';
 import jsonfile from 'jsonfile';
-import { fetchContractInfo, parseCode } from '../utils/gql.js';
+import * as path from 'path';
+import { initNpmRepository } from '../utils/executer.js';
+import { fetchContractInfo, parseCode, sendCloningAnalytics } from '../utils/gql.js';
 import { FilePath, SourceInfo } from '../utils/types/gql.js';
 
 const makeRootDirectory = (
@@ -184,8 +181,10 @@ const main = async (options: any) => {
 
     mkDirFromSources(cleanDirectories(sources), projectPath);
 
-    console.log(`Created ${Object.keys(sources).length} files`);
+    console.log(`Created ${Object.keys(sources).length} file${Object.keys(sources).length > 1 ? 's' : ''}`);
     console.log(`Done`);
+
+    sendCloningAnalytics(options, chainId, contractAddress, contractName)
   } catch (e: any) {
     console.error(e.message);
 
