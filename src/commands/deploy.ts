@@ -1,14 +1,9 @@
 import fs from 'fs';
-import { gql, request } from 'graphql-request';
 import jsonfile from 'jsonfile';
 import open from 'open';
 import path from 'path';
 import {
-  DEV_BFF,
-  DEV_FE,
-  LOCAL_BFF,
   LOCAL_FE,
-  PROD_BFF,
   PROD_FE,
   sendArtifacts,
 } from '../utils/gql.js';
@@ -100,9 +95,6 @@ const openFrontend = async (options: any, id: string): Promise<void> => {
   let url;
 
   switch (options.env) {
-    case 'dev':
-      url = DEV_FE;
-      break;
     case 'local':
       url = LOCAL_FE;
       break;
@@ -123,7 +115,6 @@ const openFrontend = async (options: any, id: string): Promise<void> => {
 
 const main = async (options: any) => {
   const projectPath = path.resolve(options.path || process.cwd());
-  // .option('-c, --contract <contract>', 'name of the contract to deploy')
   let rootContractName = options.contract;
 
   try {

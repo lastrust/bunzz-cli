@@ -31,7 +31,7 @@ The Bunzz CLI provides several commands that enable you to clone, build, and dep
 
 - **bunzz clone <id> [directory] [options]:** Clone a contract documented by DeCipher. The options you can use with this command include:
 
-  - `-e, --env <env>`: Environment to clone from [prod, dev, local] (default: "prod").
+  - `-e, --env <env>`: Environment to clone from [prod, local] (default: "prod").
 
 - **bunzz build:** Compile all smart contracts in the current directory.
 
@@ -39,7 +39,7 @@ The Bunzz CLI provides several commands that enable you to clone, build, and dep
 
   - `-p, --path <path>`: Path to the contract to deploy (default: ".")
   - `-c, --contract <contract>`: Name of the contract to deploy. (default will be taken from `bunzz.config.js`)
-  - `-e, --env <env>`: Environment to deploy to [prod, dev, local] (default: "prod").
+  - `-e, --env <env>`: Environment to deploy to [prod, local] (default: "prod").
 
 To learn more about a specific command and its options, you can type `bunzz help [command]`.
 

@@ -16,7 +16,7 @@ program
   .argument('[directory]', 'Name of the new directory')
   .option(
     '-e, --env <env>',
-    'Environment to clone from [prod, dev, local]',
+    'Environment to clone from [prod, local]',
     'prod'
   )
   .action((id, directory, options) => {
@@ -59,7 +59,7 @@ program
   .option('-c, --contract <contract>', 'name of the contract to deploy')
   .option(
     '-e, --env <env>',
-    'Environment to deploy to [prod, dev, local]',
+    'Environment to deploy to [prod, local]',
     'prod'
   )
   .action((options) => {
