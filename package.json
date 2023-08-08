@@ -24,6 +24,7 @@
   "homepage": "https://github.com/lastrust/bunzz-cli#readme",
   "dependencies": {
     "commander": "^11.0.0",
+    "graphql": "^16.7.1",
     "graphql-request": "^6.1.0",
     "inquirer": "^9.2.7",
     "jsdom": "^22.1.0",
