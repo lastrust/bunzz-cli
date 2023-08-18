@@ -2,10 +2,10 @@ import { gql, request } from 'graphql-request';
 import { ContractSourceCode } from './types/gql.js';
 import { JSDOM } from 'jsdom';
 
-export const PROD_BFF = 'https://bff.bunzz.dev/graphql';
+export const PROD_BFF = 'https://bff.dev.bunzz.dev/graphql
 export const LOCAL_BFF = 'http://127.0.0.1:8081/graphql';
 
-export const PROD_FE = 'https://app.bunzz.dev';
+export const PROD_FE = 'https://app.dev.bunzz.dev';
 export const LOCAL_FE = 'http://localhost:3000';
 
 export const fetchContractInfo = async (
