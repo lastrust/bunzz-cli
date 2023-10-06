@@ -157,7 +157,6 @@ export const sendCloningAnalytics = async (options: any, chainId: string, contra
     return response.clonedContract.status;
   } catch (error: any) {
     console.log("Failed to send analytics to bunzz.dev")
-    console.error(error)
     handleGqlError(error);
     console.log("This error does not impact the cloning process and can be ignored")
   }

@@ -92,9 +92,10 @@ const cleanDirectories = (
     }
   } else {
     // Add '/contracts' to start of each path, ignoring ones that start with '@'
+    const alreadyHasContracts = distinctSegments.some((segment) => segment === 'contracts')
     for (let p of paths) {
-      if (!p.startsWith('@')) {
-        cleanedSources['contracts' + p] = sources[p];
+      if (!p.startsWith('@') && !alreadyHasContracts) {
+        cleanedSources[`contracts${!p.startsWith('/') ? '/' : ''}` + p] = sources[p];
       } else {
         cleanedSources[p] = sources[p];
       }
@@ -109,14 +110,7 @@ const mkDirFromSources = (
   projectPath: string
 ) => {
   for (const filePath in sources) {
-    // Convert the filePath to an absolute path
-    // if filePath doesn't start with '@' or /contracts, add /contracts to the beginning
-    const finalFilePath = !(
-      filePath.startsWith('@') || filePath.startsWith('contracts')
-    )
-      ? `contracts/${filePath}`
-      : filePath;
-    const absolutePath = path.join(projectPath, finalFilePath);
+    const absolutePath = path.join(projectPath, filePath);
 
     // Get the directory path
     const dirName = path.dirname(absolutePath);
