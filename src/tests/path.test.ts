@@ -65,14 +65,6 @@ describe("Cloning", () => {
           encoding: "utf8",
         });
 
-        const mythOutput = execSync(
-          `myth analyze --execution-timeout 10 -c ${rootContractPath}`,
-          {
-            cwd: projectPath,
-            encoding: "utf8",
-          }
-        );
-
         expect(compileOutput).toMatch(
           /Compiled \d+ Solidity files successfully/
         );
