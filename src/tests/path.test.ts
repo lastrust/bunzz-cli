@@ -40,6 +40,7 @@ describe("Cloning", () => {
           runs,
           viaIR,
           solidityVersion,
+          rootContractPath,
         } = await fetchContractInfo({ env: "local" }, chainId, contractAddress);
 
         const { sources } = parseCode(code, contractName);
