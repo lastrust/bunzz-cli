@@ -40,6 +40,7 @@ describe("Cloning", () => {
           runs,
           viaIR,
           solidityVersion,
+          rootContractPath,
         } = await fetchContractInfo({ env: "local" }, chainId, contractAddress);
 
         const { sources } = parseCode(code, contractName);
@@ -63,6 +64,14 @@ describe("Cloning", () => {
           cwd: projectPath,
           encoding: "utf8",
         });
+
+        const mythOutput = execSync(
+          `myth analyze --execution-timeout 10 -c ${rootContractPath}`,
+          {
+            cwd: projectPath,
+            encoding: "utf8",
+          }
+        );
 
         expect(compileOutput).toMatch(
           /Compiled \d+ Solidity files successfully/
