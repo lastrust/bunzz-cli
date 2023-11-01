@@ -29,6 +29,13 @@ export const cleanDirectories = (
       }
     }
   } else if (distinctSegments.length === 1) {
+    if (distinctSegments[0].endsWith(".sol")) {
+      cleanedSources[`contracts/${distinctSegments[0]}`] =
+        sources[distinctSegments[0]];
+
+      return cleanedSources;
+    }
+
     // Replace common starting segment with '/contracts'
     for (let p of paths) {
       if (!p.startsWith("@")) {

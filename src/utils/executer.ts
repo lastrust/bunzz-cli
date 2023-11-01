@@ -1,4 +1,4 @@
-import { exec } from 'child_process';
+import { exec } from "child_process";
 
 export async function execute(
   command: string,
@@ -20,12 +20,12 @@ export async function execute(
 export const initNpmRepository = async (projectPath: string) => {
   // Initialize the npm repository
   try {
-    console.log('Initializing npm repository...');
-    await execute('npm init -y', projectPath, {
+    console.log("Initializing npm repository...");
+    await execute("npm init -y", projectPath, {
       log: false,
       cwd: projectPath,
     });
-    console.log('npm repository successfully initialized.');
+    console.log("npm repository successfully initialized.");
 
     await installHardhat(projectPath);
   } catch (e: any) {
@@ -35,7 +35,7 @@ export const initNpmRepository = async (projectPath: string) => {
 
 export const installHardhat = async (projectPath: string) => {
   try {
-    console.log('Installing Hardhat...');
+    console.log("Installing Hardhat...");
     await execute(`npm install --save-dev hardhat`, projectPath, {
       log: false,
       cwd: projectPath,
@@ -44,5 +44,5 @@ export const installHardhat = async (projectPath: string) => {
     console.error(e);
   }
 
-  console.log('Hardhat successfully installed.');
+  console.log("Hardhat successfully installed.");
 };
