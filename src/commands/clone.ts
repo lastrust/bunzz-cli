@@ -7,7 +7,6 @@ import {
   parseCode,
   sendCloningAnalytics,
 } from "../utils/gql.js";
-import { FilePath, SourceInfo } from "../utils/types/gql.js";
 import {
   cleanDirectories,
   createHardhatConfig,

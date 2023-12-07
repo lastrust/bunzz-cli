@@ -96,7 +96,7 @@ const main = async (options: any) => {
       }.`
     );
     // Please run `bunzz deploy` to deploy this contract (after bunzz build)
-    console.log(`Please run \`bunzz deploy\` to deploy this contract.`);
+    console.log(`Please run \`bunzz deploy\` or \`bunzz upload\` to deploy/upload this contract.`);
   } catch (e: any) {
     console.error(e.message);
   }

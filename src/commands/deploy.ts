@@ -1,22 +1,17 @@
-import fs from 'fs';
-import jsonfile from 'jsonfile';
-import open from 'open';
-import path from 'path';
-import {
-  LOCAL_FE,
-  PROD_FE,
-  sendArtifacts,
-} from '../utils/gql.js';
+import fs from "fs";
+import jsonfile from "jsonfile";
+import path from "path";
+import { LOCAL_FE, PROD_FE, sendArtifacts } from "../utils/gql.js";
 
 const getRootContractNameFromConfig = (projectPath: string): string => {
   // There is a bunzz.config.json file
   // Read contractName from it
 
-  const bunzzConfigPath = path.join(projectPath, 'bunzz.config.json');
+  const bunzzConfigPath = path.join(projectPath, "bunzz.config.json");
 
   if (!fs.existsSync(bunzzConfigPath)) {
     throw new Error(
-      'No bunzz.config.json file found. Please specifiy a contract name with -c.'
+      "No bunzz.config.json file found. Please specifiy a contract name with -c."
     );
   }
 
@@ -24,16 +19,17 @@ const getRootContractNameFromConfig = (projectPath: string): string => {
 
   if (!bunzzConfig.contractName) {
     throw new Error(
-      'No contractName found in bunzz.config.json. Please specify a contractName.'
+      "No contractName found in bunzz.config.json. Please specify a contractName."
     );
   }
 
   return bunzzConfig.contractName;
 };
 
-const getArtifacts = (
+export const getArtifacts = (
   projectPath: string,
-  rootContractName: string
+  rootContractName: string,
+  artifactsPath?: string
 ): {
   ABI: any;
   bytecode: string;
@@ -59,7 +55,10 @@ const getArtifacts = (
 
   // Find the compiled contract in the artifacts folder
   const contractNameJson = `${rootContractName}.json`;
-  const artifactsDirectories = path.join(projectPath, 'artifacts');
+  const artifactsDirectories = path.resolve(
+    projectPath,
+    artifactsPath || "./artifacts"
+  );
 
   const contractPaths = findInDir(artifactsDirectories, contractNameJson);
 
@@ -71,17 +70,15 @@ const getArtifacts = (
 
   try {
     // read the json file
-    const contractJson = fs.readFileSync(contractPaths[0], 'utf8');
+    const contractJson = fs.readFileSync(contractPaths[0], "utf8");
     // parse the json
     const contract = JSON.parse(contractJson);
     const ABI = contract.abi;
     const bytecode = contract.bytecode;
 
-    const path = contractPaths[0];
-    const startIndex = path.indexOf('artifacts');
-    const truncatedPath = path.substring(startIndex);
-
-    console.log(`Found contract ${rootContractName} in ${truncatedPath}`);
+    console.log(
+      `Found contract ${rootContractName} in ${artifactsDirectories}`
+    );
 
     return { ABI, bytecode };
   } catch (e: any) {
@@ -95,7 +92,7 @@ const openFrontend = async (options: any, id: string): Promise<void> => {
   let url;
 
   switch (options.env) {
-    case 'local':
+    case "local":
       url = LOCAL_FE;
       break;
     default:
@@ -123,14 +120,14 @@ const main = async (options: any) => {
     }
     console.log(
       `Deploying contract ${rootContractName}${
-        options.env !== 'prod' ? ` to ${options.env} environment` : ``
+        options.env !== "prod" ? ` to ${options.env} environment` : ``
       }\n`
     );
 
     const { ABI, bytecode } = getArtifacts(projectPath, rootContractName);
     const id = await sendArtifacts(options, ABI, bytecode, rootContractName);
     await openFrontend(options, id);
-    console.log('Done');
+    console.log("Done");
   } catch (e: any) {
     console.error(e.message);
   }

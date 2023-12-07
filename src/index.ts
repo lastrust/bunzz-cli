@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 
 import { Command } from "commander";
-import deploy from "./commands/deploy.js";
-import clone from "./commands/clone.js";
-import build from "./commands/build.js";
 import fs from "fs";
+import build from "./commands/build.js";
+import clone from "./commands/clone.js";
+import deploy from "./commands/deploy.js";
+import upload from "./commands/upload.js";
 
 const packageJson = JSON.parse(
   fs.readFileSync(new URL("../package.json", import.meta.url), "utf8")
@@ -62,6 +63,16 @@ program
     program.opts = () => options;
   });
 
+program
+  .command("upload")
+  .description("Upload contract through the Bunzz frontend")
+  .option("-p, --path <path>", "Path to the project folder", ".")
+  .option("-c, --contract <contract>", "name of the base contract")
+  .option("-e, --env <env>", "Environment to deploy to [prod, local]", "prod")
+  .action((options) => {
+    program.opts = () => options;
+  });
+
 program.parse(process.argv);
 
 program.parse(process.argv);
@@ -77,5 +88,8 @@ switch (program.args[0]) {
     break;
   case "deploy":
     deploy(options);
+    break;
+  case "upload":
+    upload(options);
     break;
 }
