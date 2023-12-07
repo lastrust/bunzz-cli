@@ -133,12 +133,12 @@ const getRootContractNameFromConfig = (projectPath: string): string => {
   return bunzzConfig.contractName;
 };
 
-const readHardhatFile = (
+const readHardhatFile = async (
   projectPath: string
-): {
+): Promise<{
   sourcesPath: string;
   artifactsPath: string;
-} => {
+}> => {
   const hardhatConfigPath = path.join(projectPath, "hardhat.config.js");
 
   console.log(hardhatConfigPath);
@@ -150,7 +150,12 @@ const readHardhatFile = (
   }
   console.log("read the file");
 
-  const hardhatConfig = require(hardhatConfigPath);
+  const hardhatConfig = await import(hardhatConfigPath);
+
+  // Check if sources and artifacts path exists
+  // And use default values if not
+
+  console.log("~hardhatConfig", JSON.stringify(hardhatConfig, null, 2));
 
   console.log("read end");
 
@@ -175,7 +180,7 @@ const main = async (options: any) => {
     }
 
     console.log(`read the hardhat configuration file`);
-    const { sourcesPath, artifactsPath } = readHardhatFile(projectPath);
+    const { sourcesPath, artifactsPath } = await readHardhatFile(projectPath);
 
     // check if artifactsPath exists or not (if not means it's compiled yet)
     if (!fs.existsSync(artifactsPath)) {
