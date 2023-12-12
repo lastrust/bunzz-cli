@@ -1,11 +1,27 @@
 import fs from "fs";
 import jsonfile from "jsonfile";
 import path from "path";
+import vm from "vm";
 import { getArtifacts } from "./deploy.js";
 
 interface SolidityFile {
   path: string;
   content: string;
+}
+
+interface Sandbox {
+  module?: {
+    exports: any;
+  };
+  require?: Function;
+}
+
+interface HardhatConfig {
+  paths: {
+    sources: string;
+    artifacts: string;
+  };
+  solidity: any;
 }
 
 async function findSolidityFiles(dir: string): Promise<string[]> {
@@ -57,6 +73,10 @@ async function processSolidityFile(
   let files: SolidityFile[] = [{ path: filePath, content }];
 
   for (const importPath of imports) {
+    // Skip third-party imported files
+    if (importPath.startsWith("@") || !importPath.startsWith(".")) {
+      continue;
+    }
     const resolvedPath = path.resolve(path.dirname(filePath), importPath);
     if (!resolvedPath.startsWith(projectPath)) {
       throw new Error(
@@ -75,11 +95,22 @@ async function getAllSolidityFiles(
   sourcesPath: string,
   projectPath: string
 ): Promise<SolidityFile[]> {
-  const sourceFiles = await findSolidityFiles(sourcesPath);
+  const resolvedSourcesPath = path.resolve(projectPath, sourcesPath);
+  const sourceFiles = await findSolidityFiles(resolvedSourcesPath);
   let allFiles: SolidityFile[] = [];
+  let processedFiles = new Set<string>();
 
   for (const file of sourceFiles) {
-    allFiles = allFiles.concat(await processSolidityFile(file, projectPath));
+    // Check if file is already processed
+    if (!processedFiles.has(file)) {
+      const processed = await processSolidityFile(
+        file,
+        projectPath,
+        processedFiles
+      );
+      allFiles = allFiles.concat(processed);
+      processed.forEach((f) => processedFiles.add(f.path)); // Add to processed set
+    }
   }
 
   return allFiles;
@@ -104,7 +135,7 @@ async function askUserToSelectContract(
     {
       type: "list",
       name: "selectedContract",
-      message: "Please select a contract:",
+      message: "Please select a contract as the base contract:",
       choices: contractNames,
     },
   ];
@@ -138,32 +169,69 @@ const readHardhatFile = async (
 ): Promise<{
   sourcesPath: string;
   artifactsPath: string;
+  solidityVersion: string;
+  optimizerEnabled: boolean;
+  optimizerRuns: number;
 }> => {
   const hardhatConfigPath = path.join(projectPath, "hardhat.config.js");
-
-  console.log(hardhatConfigPath);
 
   if (!fs.existsSync(hardhatConfigPath)) {
     throw new Error(
       "The uploading process requires hardhat configuration file. Please run `bunzz init` to create it. Detail: https://docs..."
     );
   }
-  console.log("read the file");
 
-  const hardhatConfig = await import(hardhatConfigPath);
+  const configFileContents = fs.readFileSync(hardhatConfigPath, "utf8");
+  let hardhatConfig: HardhatConfig;
 
-  // Check if sources and artifacts path exists
-  // And use default values if not
+  try {
+    // Evaluate the config file in a VM to safely obtain the exports
+    const script = new vm.Script(configFileContents, {
+      filename: "hardhat.config.js",
+    });
+    const sandbox: Sandbox = {
+      module: { exports: {} },
+      require: () => {}, // Stubbing require
+    };
+    const context = vm.createContext(sandbox);
+    script.runInContext(context);
 
-  console.log("~hardhatConfig", JSON.stringify(hardhatConfig, null, 2));
+    if (!sandbox.module || typeof sandbox.module.exports === "undefined") {
+      throw new Error("Failed to extract configuration from hardhat.config.js");
+    }
+    hardhatConfig = sandbox.module.exports;
+  } catch (error) {
+    throw new Error(`Error loading hardhat config: ${error}`);
+  }
 
-  console.log("read end");
+  // Extract required fields
+  const sourcesPath = hardhatConfig.paths?.sources;
+  const artifactsPath = hardhatConfig.paths?.artifacts;
+  const solidity = hardhatConfig.solidity;
 
-  const sourcesPath = hardhatConfig.paths.sources;
-  const artifactsPath = hardhatConfig.paths.artifacts;
+  let solidityVersion: string;
+  let optimizerEnabled = false;
+  let optimizerRuns = 0;
 
-  console.log("reading hardhat is done");
-  return { sourcesPath, artifactsPath };
+  if (typeof solidity === "string") {
+    solidityVersion = solidity;
+  } else {
+    solidityVersion = solidity.version;
+    optimizerEnabled = solidity.settings?.optimizer?.enabled;
+    optimizerRuns = solidity.settings?.optimizer?.runs;
+  }
+
+  if (!sourcesPath || !artifactsPath || !solidityVersion) {
+    throw new Error("Unable to find required fields in hardhat configuration.");
+  }
+
+  return {
+    sourcesPath,
+    artifactsPath,
+    solidityVersion,
+    optimizerEnabled,
+    optimizerRuns,
+  };
 };
 
 const main = async (options: any) => {
@@ -174,23 +242,25 @@ const main = async (options: any) => {
   let rootContractName = options.contract;
 
   try {
-    console.log("start the process");
     if (!rootContractName) {
       rootContractName = getRootContractNameFromConfig(projectPath);
     }
 
-    console.log(`read the hardhat configuration file`);
-    const { sourcesPath, artifactsPath } = await readHardhatFile(projectPath);
+    const {
+      sourcesPath,
+      artifactsPath,
+      solidityVersion,
+      optimizerEnabled,
+      optimizerRuns,
+    } = await readHardhatFile(projectPath);
 
-    // check if artifactsPath exists or not (if not means it's compiled yet)
+    // check if artifactsPath exists or not (if not means it's not compiled yet)
     if (!fs.existsSync(artifactsPath)) {
       throw new Error(
         `The project is not compiled yet, pls run \`bunzz build\` to compile it.`
       );
     }
 
-    // get the codes (solidity files absolute path and content which is in sourcePath or immported from the project dir others folders, except the third-party library ones)
-    console.log(`get all solditity files`);
     const solFiles = await getAllSolidityFiles(sourcesPath, projectPath);
 
     if (!rootContractName) {
@@ -214,12 +284,14 @@ const main = async (options: any) => {
     // get the artifacts of base contract
     const { ABI, bytecode } = getArtifacts(projectPath, rootContractName);
 
-    console.log("abi:", ABI);
-    console.log("bytecode:", bytecode);
-
     // validate the artifacts and respective code
 
-    console.log("Done");
+    // store the artifacts and related infos to the bunzz server
+    console.log("abi:", ABI);
+    console.log("bytecode:", bytecode);
+    console.log("solidityVersion:", solidityVersion);
+    console.log("optimizerEnabled:", optimizerEnabled);
+    console.log("optimizerRuns:", optimizerRuns);
   } catch (e: any) {
     console.error(e.message);
   }
