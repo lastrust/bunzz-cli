@@ -1,4 +1,5 @@
 import fs from "fs";
+import inquirer from "inquirer";
 import jsonfile from "jsonfile";
 import path from "path";
 import vm from "vm";
@@ -40,7 +41,7 @@ async function findSolidityFiles(dir: string): Promise<string[]> {
 }
 
 function parseImports(fileContent: string): string[] {
-  const importRegex = /^\s*import\s+(["'])(.*?)\1;/gm;
+  const importRegex = /import(?:.*?from\s+)?(['"])([^'"]+)(['"]);/g;
   const imports = [];
 
   let match;
@@ -74,7 +75,7 @@ async function processSolidityFile(
 
   for (const importPath of imports) {
     // Skip third-party imported files
-    if (importPath.startsWith("@") || !importPath.startsWith(".")) {
+    if (importPath.startsWith("@")) {
       continue;
     }
     const resolvedPath = path.resolve(path.dirname(filePath), importPath);
@@ -140,7 +141,6 @@ async function askUserToSelectContract(
     },
   ];
 
-  const inquirer = (await import("inquirer")).default;
   const answers = await inquirer.prompt(questions);
   return answers.selectedContract;
 }
