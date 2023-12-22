@@ -3,7 +3,8 @@ import inquirer from "inquirer";
 import jsonfile from "jsonfile";
 import path from "path";
 import vm from "vm";
-import { getArtifacts } from "./deploy.js";
+import { sendArtifacts } from "../utils/gql.js";
+import { getArtifacts, openFrontend } from "./deploy.js";
 
 interface SolidityFile {
   path: string;
@@ -273,7 +274,7 @@ const main = async (options: any) => {
       }
 
       if (contractNames.length === 0) {
-        throw new Error("No contracts found.");
+        throw new Error("No contracts found. Exiting...");
       }
 
       // ask user to select the base contract if the rootContractName is empty in interactive mode
@@ -287,11 +288,20 @@ const main = async (options: any) => {
     // validate the artifacts and respective code
 
     // store the artifacts and related infos to the bunzz server
-    console.log("abi:", ABI);
-    console.log("bytecode:", bytecode);
-    console.log("solidityVersion:", solidityVersion);
-    console.log("optimizerEnabled:", optimizerEnabled);
-    console.log("optimizerRuns:", optimizerRuns);
+    console.log(`sending artifacts to bunzz...`);
+
+    const id = await sendArtifacts(
+      options,
+      ABI,
+      bytecode,
+      rootContractName,
+      solidityVersion,
+      optimizerEnabled,
+      optimizerRuns,
+      solFiles
+    );
+    await openFrontend(options, "upload", id);
+    console.log("Done");
   } catch (e: any) {
     console.error(e.message);
   }
