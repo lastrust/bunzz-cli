@@ -88,7 +88,11 @@ export const getArtifacts = (
   }
 };
 
-const openFrontend = async (options: any, id: string): Promise<void> => {
+export const openFrontend = async (
+  options: any,
+  process: string,
+  id: string
+): Promise<void> => {
   let url;
 
   switch (options.env) {
@@ -100,7 +104,7 @@ const openFrontend = async (options: any, id: string): Promise<void> => {
       break;
   }
 
-  const finalUrl = `${url}/deploy/${id}`;
+  const finalUrl = `${url}/${process}/${id}`;
   try {
     await open(finalUrl);
   } catch (e: any) {
@@ -126,7 +130,7 @@ const main = async (options: any) => {
 
     const { ABI, bytecode } = getArtifacts(projectPath, rootContractName);
     const id = await sendArtifacts(options, ABI, bytecode, rootContractName);
-    await openFrontend(options, id);
+    await openFrontend(options, "deploy", id);
     console.log("Done");
   } catch (e: any) {
     console.error(e.message);
