@@ -42,12 +42,13 @@ async function findSolidityFiles(dir: string): Promise<string[]> {
 }
 
 function parseImports(fileContent: string): string[] {
-  const importRegex = /import(?:.*?from\s+)?(['"])([^'"]+)(['"]);/g;
+  const importRegex =
+    /import\s+(["'])(.*?)\1;|import\s+\{[^}]*\}\s+from\s+(['"])(.*?)\3;/g;
   const imports = [];
 
   let match;
   while ((match = importRegex.exec(fileContent)) !== null) {
-    imports.push(match[2]);
+    imports.push(match[2] || match[4]);
   }
 
   return imports;
@@ -114,6 +115,17 @@ async function getAllSolidityFiles(
       processed.forEach((f) => processedFiles.add(f.path)); // Add to processed set
     }
   }
+
+  const baseDirName = path.basename(projectPath);
+
+  // Modify the file paths in allFiles
+  allFiles = allFiles.map((file) => {
+    const relativePath = path.relative(projectPath, file.path);
+    return {
+      ...file,
+      path: path.join(baseDirName, relativePath),
+    };
+  });
 
   return allFiles;
 }
