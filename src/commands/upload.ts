@@ -190,7 +190,7 @@ const readHardhatFile = async (
 
   if (!fs.existsSync(hardhatConfigPath)) {
     throw new Error(
-      "The uploading process requires hardhat configuration file. Please run `bunzz init` to create it. Detail: https://docs..."
+      "The uploading process requires hardhat configuration file. Please run `bunzz init` to create it."
     );
   }
 
@@ -250,7 +250,7 @@ const readHardhatFile = async (
 const main = async (options: any) => {
   const projectPath = path.resolve(options.path || process.cwd());
 
-  console.log(`started the uploading process for ${projectPath}`);
+  console.log(`started the uploading process for ${projectPath} \n`);
 
   let rootContractName = options.contract;
 
@@ -291,7 +291,7 @@ const main = async (options: any) => {
 
       // ask user to select the base contract if the rootContractName is empty in interactive mode
       rootContractName = await askUserToSelectContract(contractNames);
-      console.log(`Selected Contract: ${rootContractName}`);
+      console.log(`Selected Contract: ${rootContractName}\n`);
     }
 
     // get the artifacts of base contract
@@ -300,7 +300,7 @@ const main = async (options: any) => {
     // validate the artifacts and respective code
 
     // store the artifacts and related infos to the bunzz server
-    console.log(`sending artifacts to bunzz...`);
+    console.log(`sending artifacts to bunzz...\n`);
 
     const id = await sendArtifacts(
       options,
@@ -312,7 +312,7 @@ const main = async (options: any) => {
       optimizerRuns,
       solFiles
     );
-    await openFrontend(options, "upload", id);
+    await openFrontend(options, "repository/upload", id);
     console.log("Done");
   } catch (e: any) {
     console.error(e.message);

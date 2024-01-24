@@ -77,7 +77,7 @@ export const getArtifacts = (
     const bytecode = contract.bytecode;
 
     console.log(
-      `Found contract ${rootContractName} in ${artifactsDirectories}`
+      `Found contract ${rootContractName} in ${artifactsDirectories}\n`
     );
 
     return { ABI, bytecode };
