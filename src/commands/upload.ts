@@ -4,6 +4,7 @@ import jsonfile from "jsonfile";
 import path from "path";
 import vm from "vm";
 import { sendArtifacts } from "../utils/gql.js";
+import { checkContracts, compile, deleteCache } from "./build.js";
 import { getArtifacts, openFrontend } from "./deploy.js";
 
 interface SolidityFile {
@@ -116,6 +117,41 @@ async function getAllSolidityFiles(
     }
   }
 
+  return allFiles;
+}
+
+async function getRootContractRelatedSolFiles(
+  sourcesPath: string,
+  projectPath: string,
+  rootContractName: string
+): Promise<SolidityFile[]> {
+  const resolvedSourcesPath = path.resolve(projectPath, sourcesPath);
+  const sourceFiles = await findSolidityFiles(resolvedSourcesPath);
+  let allFiles: SolidityFile[] = [];
+  let processedFiles = new Set<string>();
+  let rootContractFile = "";
+
+  for (const filePath of sourceFiles) {
+    const content = await fetchFileContent(filePath);
+    const contractNames = await getContractNames(content);
+
+    for (const contractName of contractNames) {
+      if (rootContractName == contractName) {
+        rootContractFile = filePath;
+        break;
+      }
+    }
+    if (!rootContractFile) break;
+  }
+
+  const processed = await processSolidityFile(
+    rootContractFile,
+    projectPath,
+    processedFiles
+  );
+  allFiles = allFiles.concat(processed);
+  processed.forEach((f) => processedFiles.add(f.path)); // Add to processed set
+
   const baseDirName = path.basename(projectPath);
 
   // Modify the file paths in allFiles
@@ -149,7 +185,8 @@ async function askUserToSelectContract(
     {
       type: "list",
       name: "selectedContract",
-      message: "Please select a contract as the base contract:",
+      message:
+        "Please select the contract that you wanna use as the root contract during deployment:",
       choices: contractNames,
     },
   ];
@@ -267,6 +304,14 @@ const main = async (options: any) => {
       optimizerRuns,
     } = await readHardhatFile(projectPath);
 
+    // compile the contracts
+    console.log("Compiling the contracts...\n");
+    deleteCache(projectPath, artifactsPath);
+
+    checkContracts(projectPath, sourcesPath);
+
+    await compile(projectPath);
+
     // check if artifactsPath exists or not (if not means it's not compiled yet)
     if (!fs.existsSync(artifactsPath)) {
       throw new Error(
@@ -274,12 +319,12 @@ const main = async (options: any) => {
       );
     }
 
-    const solFiles = await getAllSolidityFiles(sourcesPath, projectPath);
+    const allSolFiles = await getAllSolidityFiles(sourcesPath, projectPath);
 
     if (!rootContractName) {
       // get all the contracts from the artifactsPath
       let contractNames: string[] = [];
-      for (const file of solFiles) {
+      for (const file of allSolFiles) {
         contractNames = contractNames.concat(
           await getContractNames(file.content)
         );
@@ -294,8 +339,19 @@ const main = async (options: any) => {
       console.log(`Selected Contract: ${rootContractName}\n`);
     }
 
+    // get rootContract related solidity files
+    const solFiles = await getRootContractRelatedSolFiles(
+      sourcesPath,
+      projectPath,
+      rootContractName
+    );
+
     // get the artifacts of base contract
-    const { ABI, bytecode } = getArtifacts(projectPath, rootContractName);
+    const { ABI, bytecode } = getArtifacts(
+      projectPath,
+      rootContractName,
+      artifactsPath
+    );
 
     // validate the artifacts and respective code
 

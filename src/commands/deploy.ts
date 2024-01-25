@@ -104,6 +104,10 @@ export const openFrontend = async (
       break;
   }
 
+  if (options.env == "local" && !url) {
+    throw Error("LOCAL_FE url env is not set");
+  }
+
   const finalUrl = `${url}/${process}/${id}`;
   try {
     await open(finalUrl);
