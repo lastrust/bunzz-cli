@@ -1,12 +1,18 @@
+import "dotenv/config";
 import { gql, request } from "graphql-request";
-import { ContractSourceCode } from "./types/gql.js";
 import { JSDOM } from "jsdom";
+import { ContractSourceCode } from "./types/gql.js";
 
 export const PROD_BFF = "https://bff.bunzz.dev/graphql";
-export const LOCAL_BFF = "http://127.0.0.1:8081/graphql";
+export const LOCAL_BFF = process.env.LOCAL_BFF || "";
 
 export const PROD_FE = "https://app.bunzz.dev";
-export const LOCAL_FE = "http://localhost:3000";
+export const LOCAL_FE = process.env.LOCAL_FE || "";
+
+interface SolidityFile {
+  path: string;
+  content: string;
+}
 
 export const fetchContractInfo = async (
   options: any,
@@ -53,6 +59,10 @@ export const fetchContractInfo = async (
     default:
       url = PROD_BFF;
       break;
+  }
+
+  if (options.env == "local" && !url) {
+    throw Error("LOCAL_BFF url env is not set");
   }
 
   try {
@@ -104,7 +114,11 @@ export const sendArtifacts = async (
   options: any,
   abi: any,
   bytecode: string,
-  contractName: string
+  contractName: string,
+  solidityVersion?: string,
+  optimizerEnabled?: boolean,
+  optimizerRuns?: number,
+  solidityFiles?: SolidityFile[]
 ): Promise<string> => {
   const mutation = gql`
     mutation CreateArtifacts($req: CreateArtifactsReq!) {
@@ -117,8 +131,17 @@ export const sendArtifacts = async (
   const variables = {
     req: {
       abi: JSON.stringify(abi),
-      bytecode,
-      contractName,
+      bytecode: bytecode,
+      contractName: contractName,
+      solidityVersion: solidityVersion,
+      optimizerEnabled: optimizerEnabled,
+      optimizerRuns: optimizerRuns,
+      solidityFiles: solidityFiles
+        ? solidityFiles.map((file) => ({
+            path: file.path,
+            content: file.content,
+          }))
+        : undefined,
     },
   };
 
@@ -131,6 +154,10 @@ export const sendArtifacts = async (
     default:
       url = PROD_BFF;
       break;
+  }
+
+  if (options.env == "local" && !url) {
+    throw Error("LOCAL_BFF url env is not set");
   }
 
   try {
@@ -173,6 +200,10 @@ export const sendCloningAnalytics = async (
     default:
       url = PROD_BFF;
       break;
+  }
+
+  if (options.env == "local" && !url) {
+    throw Error("LOCAL_BFF url env is not set");
   }
 
   try {
