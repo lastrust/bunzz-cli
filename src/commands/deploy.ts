@@ -1,5 +1,6 @@
 import fs from "fs";
 import jsonfile from "jsonfile";
+import open from "open";
 import path from "path";
 import { LOCAL_FE, PROD_FE, sendArtifacts } from "../utils/gql.js";
 
